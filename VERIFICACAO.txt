@@ -1,0 +1,47 @@
+VERIFICAÇÃO — 12/11/2026
+
+32 verificações de regras de pedidos e ementas, mais 10 de acesso e email com serviços simulados.
+Não houve execução no Cloudflare nem teste visual num navegador.
+
+PASSOU — Five lunches and exactly two desserts
+PASSOU — Meal + dessert totals in integer cents
+PASSOU — No dessert selected
+PASSOU — Both dessert prices respected
+PASSOU — No contact stored; observations preserved
+PASSOU — Client cannot override dessert price
+PASSOU — Allergen snapshots survive later menu edits
+PASSOU — Stale menu rejected
+PASSOU — No consent rejected
+PASSOU — Honeypot rejected
+PASSOU — No name rejected
+PASSOU — Unknown day rejected
+PASSOU — Duplicate day rejected
+PASSOU — Zero meals rejected
+PASSOU — Eleven meals rejected
+PASSOU — Fractional meals rejected
+PASSOU — Dessert without lunch rejected
+PASSOU — Too many desserts rejected
+PASSOU — Fractional dessert rejected
+PASSOU — Unknown dessert rejected
+PASSOU — Dessert quantity without choice rejected
+PASSOU — Closed orders rejected
+PASSOU — Inactive dessert rejected
+PASSOU — Same-day cutoff rejected
+PASSOU — No lunch response accepted
+PASSOU — Unknown lunch price marked
+PASSOU — 14 selectable categories
+PASSOU — Unknown allergen rejected
+PASSOU — Missing active dessert price rejected
+PASSOU — Negative price rejected
+PASSOU — Non-Monday start rejected
+PASSOU — Invalid image rejected
+PASSOU — No admin token
+PASSOU — Malformed admin token
+PASSOU — Expired session
+PASSOU — Unknown session
+PASSOU — Private orders protected
+PASSOU — Menu publishing protected
+PASSOU — Email retry protected
+PASSOU — Valid session accepted
+PASSOU — Production kitchen starts closed
+PASSOU — Email includes dessert and observations

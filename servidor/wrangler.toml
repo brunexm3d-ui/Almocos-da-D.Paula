@@ -1,0 +1,15 @@
+name = "a-mesa-api"
+main = "worker.mjs"
+compatibility_date = "2026-11-12"
+
+[vars]
+# Só a origem, sem nome do repositório nem barra final.
+ALLOWED_ORIGIN = "https://SEU-UTILIZADOR.github.io"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "a-mesa"
+database_id = "COLOCAR-ID-DA-BASE-DE-DADOS"
+
+[triggers]
+crons = ["0 3 * * *"]

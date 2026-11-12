@@ -1,0 +1,64 @@
+ALMOÇOS — DEMONSTRAÇÃO PARA GITHUB PAGES
+
+Este pacote coloca o ficheiro index.html diretamente na pasta principal.
+Não necessita de instalar programas, compilar código ou configurar Actions.
+
+PUBLICAR A DEMONSTRAÇÃO
+
+1. Extraia o ZIP no computador.
+2. Abra https://github.com/new e crie um repositório chamado almocos.
+   Para usar GitHub Pages com uma conta gratuita, selecione Public.
+   Se já tem um repositório específico para este projeto, pode usá-lo.
+   Não substitua um index.html de outro projeto.
+3. No repositório, use Add file > Upload files. Num repositório vazio,
+   também pode usar a ligação uploading an existing file.
+4. Arraste o index.html extraído para o GitHub e clique em Commit changes.
+   O index.html deve aparecer na lista principal do repositório.
+   Não carregue o ZIP nem uma pasta que deixe o index.html num subdiretório.
+5. Abra Settings > Pages.
+6. Em Source, escolha Deploy from a branch.
+7. Em Branch, escolha main; na pasta, escolha /(root); carregue em Save.
+8. Aguarde a publicação. Pode demorar alguns minutos.
+9. Volte a Settings > Pages e use Visit site quando a ligação aparecer.
+   Abra essa ligação, não a página do ficheiro no separador Code.
+
+O endereço terá normalmente o formato:
+https://SEU-UTILIZADOR.github.io/almocos/
+Substitua SEU-UTILIZADOR pelo seu nome GitHub. Não é uma ligação já publicada.
+
+COMO TESTAR
+
+• Escolha Quero almoço ou Não quero nos dias da ementa de exemplo.
+• Use dados fictícios no teste e experimente enviar a resposta.
+• Abra A cozinha > Experimentar o painel para editar pratos e fotografias.
+• Publique a ementa de teste e veja o resultado na página.
+• Consulte as respostas de teste em A cozinha > Pedidos.
+
+ESTADO DESTA VERSÃO
+
+É uma demonstração do funcionamento e do aspeto da página.
+Os testes são guardados na sessão deste navegador; não são partilhados
+com outros dispositivos e não enviam emails. O painel da demonstração
+é aberto para experimentar e não representa autenticação de produção.
+
+PARA RECEBER PEDIDOS REAIS
+
+O GitHub Pages aloja a página, mas não executa o servidor necessário para
+guardar a ementa da mãe, proteger o painel e enviar notificações por email.
+Será necessário ligar a página a um serviço com base de dados,
+autenticação e envio de emails. Nunca coloque palavras-passe ou chaves
+secretas no index.html nem num repositório público.
+
+O pacote Almocos-Semana.zip anterior inclui uma implementação alternativa
+para Google Apps Script. Essa implementação funciona no próprio Apps Script;
+não fica automaticamente ligada ao publicar este HTML no GitHub Pages.
+
+Esta publicação serve para avaliar a demonstração. Se o destino final for
+um negócio de venda de refeições, escolheremos alojamento adequado:
+o GitHub Pages tem restrições ao alojamento de negócios e transações.
+O código pode continuar guardado num repositório GitHub.
+
+DOCUMENTAÇÃO OFICIAL
+
+https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site
+https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits

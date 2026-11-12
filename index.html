@@ -11,6 +11,9 @@
 @media(max-width:1050px){.wrap{width:calc(100% - 40px)}.layout{grid-template-columns:minmax(0,1fr) 300px;gap:20px}.menu-grid{gap:16px}.photo{height:145px}.meal-body{padding:16px}.hero-art{width:210px}.hero-art svg{width:190px}.summary{padding:20px}}
 @media(max-width:820px){.layout{grid-template-columns:1fr}.summary{position:static}.menu-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.photo{height:190px}.hero-art{width:170px}.hero-art svg{width:160px}.hero-art .stamp{width:70px;height:70px;font-size:.83rem}.settings-grid{grid-template-columns:1fr 1fr}.settings-grid>label:first-child{grid-column:1/-1}.stat-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:520px){.wrap{width:calc(100% - 32px)}.nav{padding:18px 0;gap:8px}.brand-icon{width:34px;height:34px;font-size:22px}.brand-name{font-size:1.65rem}.brand small{font-size:.53rem}.tabs{gap:1px}.tabs button{padding:8px 10px;font-size:.76rem}.hero{padding:33px 0 25px}.hero h1{font-size:2.6rem}.hero p{font-size:.84rem}.hero-art{display:none}.eyebrow{font-size:.6rem;margin-bottom:14px}.week-heading{gap:12px;align-items:flex-start}.week-heading h2{font-size:1.5rem}.pill{font-size:.62rem;padding:7px 9px}.menu-grid{grid-template-columns:1fr}.photo{height:200px}.meal-desc{min-height:0}.note-card{padding:24px}.note-card .sprig{display:none}.summary{padding:22px}.edit-day{grid-template-columns:1fr;padding:17px}.edit-image{display:grid;grid-template-columns:100px 1fr;align-items:center;gap:15px}.edit-image img{height:80px;margin:0}.edit-grid{grid-template-columns:minmax(0,1fr) 90px}.panel{padding:18px}.settings-grid{gap:13px}.stat-grid{grid-template-columns:repeat(2,1fr)}.stat{padding:15px}.editor-head{align-items:flex-start}.editor-head h2{font-size:1.7rem}.admin-actions{flex-direction:column;align-items:stretch}.footer-content{align-items:flex-start;flex-direction:column;gap:9px}.demo-bar{font-size:.68rem}}
+
+.allergen-info{font-size:.73rem;line-height:1.5;background:#f2f3eb;border-radius:8px;padding:10px 12px;margin:10px 0 15px;color:#45503f}.allergen-info strong{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em}.allergen-info p{margin:4px 0 0;line-height:1.5}.dessert-choice{margin-top:15px;padding-top:15px;border-top:1px solid var(--line)}.dessert-choice select{font-size:.82rem}.dessert-detail{margin-top:12px}.dessert-detail .allergen-info{margin-bottom:0}.dessert-summary{color:var(--green)!important}.allergen-editor{border:1px solid var(--line);border-radius:9px;padding:12px}.allergen-editor summary{cursor:pointer;font-size:.8rem;font-weight:650;min-height:32px}.allergen-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:10px 0 20px}.allergen-checks label{font-size:.75rem}.dessert-editors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}.dessert-editor{padding:17px;background:var(--paper);border:1px solid var(--line);border-radius:12px}.dessert-editor .edit-grid{grid-template-columns:minmax(0,1fr) 100px}.dessert-editor .allergen-checks{grid-template-columns:1fr}@media(max-width:820px){.dessert-editors{grid-template-columns:1fr}.dessert-editor .allergen-checks{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.allergen-checks,.dessert-editor .allergen-checks{grid-template-columns:1fr}.dessert-editor .edit-grid{grid-template-columns:minmax(0,1fr) 85px}}
+
 </style>
 </head>
 <body>
@@ -21,8 +24,10 @@
 <div id="toast" class="toast" role="status" hidden></div>
 <script>
 'use strict';
-const LIVE = !!(window.google && google.script && google.script.run);
-const DEMO_KEY = 'a-mesa-demo-v1';
+// URL HTTPS do servidor, depois de o ativar. Vazio mantém a demonstração local.
+const API_URL = '';
+const LIVE = /^https:\/\//.test(API_URL);
+const DEMO_KEY = 'a-mesa-demo-v2';
 const $ = (s,root=document)=>root.querySelector(s);
 const $$ = (s,root=document)=>[...root.querySelectorAll(s)];
 const esc = s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -38,9 +43,9 @@ function plate(kind=0){const colors=[['#d9e2cd','#d4a058','#789347'],['#e9d9ca',
 function initialDemo(){const start=monday();const meals=[['Frango assado no forno','Com arroz e legumes salteados.',6.5],['Filetes de peixe','Com arroz de tomate e salada.',6.5],['Massa à bolonhesa','Molho de tomate e queijo ralado.',6],['Bacalhau com natas','Gratinado no forno, com salada.',7],['Arroz de legumes','Com grão, cenoura e ervas aromáticas.',6]];return {menu:{version:1,weekStart:start,title:'A ementa desta semana',intro:'Comida caseira, feita com tempo. Escolha os almoços dos seus dias e envie o seu pedido.',notice:'Consulte a cozinha sobre ingredientes e alergénios antes de pedir.',cutoffTime:'10:00',accepting:true,days:meals.map((m,i)=>({date:addDays(start,i),title:m[0],description:m[1],price:m[2],image:plate(i),available:true}))},orders:[]};}
 function loadDemo(){try{const d=JSON.parse(sessionStorage.getItem(DEMO_KEY));if(d?.menu?.days?.length===5)return d;}catch{}return initialDemo();}
 let demo=loadDemo(),menu,choices={},draft={},token='',view='public',adminPage='menu',requestId=uuid(),sending=false;
-const customer={name:'',contact:'',note:''};
+const customer={name:'',note:''};
 let selectedRevision,toastTimer,uploading=0;
-function busy(flag){$('#publicTab').disabled=flag;$('#adminTab').disabled=flag;$('#orderForm input,#orderForm textarea').forEach(el=>el.disabled=flag);}
+function busy(flag){$('#publicTab').disabled=flag;$('#adminTab').disabled=flag;$$('#orderForm input,#orderForm textarea').forEach(el=>el.disabled=flag);}
 function persistDemo(){try{sessionStorage.setItem(DEMO_KEY,JSON.stringify(demo));}catch{throw new Error('O armazenamento desta demonstração está cheio. Experimente uma fotografia mais pequena.');}}
 async function call(method,...args){if(LIVE)return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(e=>reject(new Error(e.message||'Não foi possível concluir. Tente novamente.')))[method](...args));return demoCall(method,...args);}
 async function demoCall(method,...args){switch(method){case'getPublicMenu':return structuredClone(demo.menu);case'adminLogin':return 'demo';case'adminLogout':return true;case'getAdminData':return structuredClone(demo);case'publishMenu':{const next=structuredClone(args[1]);next.version=demo.menu.version+1;demo.menu=next;persistDemo();return structuredClone(next);}case'submitOrder':{const p=args[0];const old=demo.orders.find(o=>o.id===p.id);if(old)return {id:old.id,emailStatus:'demo'};if(p.version!==demo.menu.version)throw new Error('A ementa mudou. Atualize a página antes de enviar.');const o={id:p.id,createdAt:new Date().toISOString(),name:p.name,contact:p.contact,note:p.note,weekStart:menu.weekStart,items:p.items.map(x=>({...x,title:menu.days.find(d=>d.date===x.date).title,price:menu.days.find(d=>d.date===x.date).price})),emailStatus:'demo'};demo.orders.unshift(o);persistDemo();return {id:o.id,emailStatus:'demo'};}default:throw new Error('Operação indisponível.');}}
@@ -50,10 +55,10 @@ function isClosed(d){if(!menu.accepting||!d.available||!d.title)return true;if(!
 function safeImage(s){return typeof s==='string'&&(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(s)||(!LIVE&&s.startsWith('data:image/svg+xml;charset=utf-8,')))?s:'';}
 function imageHTML(d,i){const src=safeImage(d.image);return src?'<img src="'+esc(src)+'" alt="'+esc(d.title||'Fotografia do prato')+'" loading="lazy">':'<div style="height:100%;display:grid;place-items:center;color:#68735c;font-family:Georgia,serif;font-size:1.3rem">O prato do dia</div>';}
 const heroArt='<svg viewBox="0 0 240 220" fill="none" aria-hidden="true"><ellipse cx="120" cy="113" rx="84" ry="85" fill="#e9eddf"/><circle cx="120" cy="108" r="72" fill="#fffef9" stroke="#c9d1bc"/><circle cx="120" cy="108" r="54" stroke="#dfe4d7"/><path d="M104 143q24-52 47-75m-40 57q-24-3-22-22 26-1 28 12m4-8q-5-25 11-31 11 14 0 26m2-5q26 0 27-17-20-6-27 6" fill="#7d9567" stroke="#46623f" stroke-width="1.5"/><path d="M18 53v45m-7-45v25q0 9 7 9t7-9V53m-7 46v65m202-111q-14 23-11 47h11V53v111" stroke="#859276" stroke-width="3" stroke-linecap="round"/></svg>';
-function renderPublic(){view='public';$('#publicTab').classList.add('active');$('#adminTab').classList.remove('active');$('#app').innerHTML='<section class="hero"><div><span class="eyebrow">A sua semana começa à mesa</span><h1>O almoço tratado.<br>A semana mais leve.</h1><p>'+esc(menu.intro)+'</p></div><div class="hero-art">'+heroArt+'<span class="stamp">Feito<br>com carinho</span></div></section><section class="week-heading"><div><h2>'+esc(menu.title)+'</h2><p>'+fmtDate(menu.weekStart,{day:'numeric'})+' a '+fmtDate(addDays(menu.weekStart,4),{day:'numeric',month:'long'})+' · Pedidos até às '+esc(menu.cutoffTime)+' do próprio dia</p></div><span class="pill">'+(menu.accepting?'Escolha os seus dias':'Pedidos fechados')+'</span></section><div class="layout"><div class="menu-grid" id="menuGrid"></div><aside class="summary" id="summary" aria-label="O seu pedido"><h2>O seu pedido</h2><p class="summary-intro">Escolha os dias e envie tudo de uma vez.</p><div id="selectedMeals" aria-live="polite"></div><form id="orderForm"><div class="fields"><label>O seu nome<input id="customerName" name="name" autocomplete="name" required minlength="2" maxlength="80" placeholder="Como se chama?" value="'+esc(customer.name)+'"></label><label>Telemóvel ou email<input id="customerContact" name="contact" autocomplete="email" required minlength="6" maxlength="120" placeholder="Para falar consigo sobre o pedido" value="'+esc(customer.contact)+'"></label><label>Observações <span class="micro">(opcional)</span><textarea id="customerNote" name="note" maxlength="400" placeholder="Alguma indicação para a cozinha?">'+esc(customer.note)+'</textarea></label><label class="trap" aria-hidden="true">Empresa<input name="website" tabindex="-1" autocomplete="off"></label><label class="check-label"><input id="consent" type="checkbox" required><span>Autorizo o uso do meu nome e contacto para tratar deste pedido.</span></label></div><button class="primary wide submit" id="submitOrder" type="submit" disabled>'+(LIVE?'Enviar pedido →':'Experimentar pedido →')+'</button><p class="fine">'+(LIVE?'O pedido fica registado para a cozinha. Não é efetuado qualquer pagamento nesta página.':'Apenas uma simulação. Nenhum pedido ou email é enviado.')+'</p><p id="orderFeedback" role="alert" hidden></p></form></aside></div>';
-renderCards();renderSelection();$('#orderForm').addEventListener('submit',sendOrder);for(const [id,key]of[['customerName','name'],['customerContact','contact'],['customerNote','note']])$('#'+id).addEventListener('input',e=>{customer[key]=e.target.value;requestId=uuid();});}
+function renderPublic(){view='public';$('#publicTab').classList.add('active');$('#adminTab').classList.remove('active');$('#app').innerHTML='<section class="hero"><div><span class="eyebrow">A sua semana começa à mesa</span><h1>O almoço tratado.<br>A semana mais leve.</h1><p>'+esc(menu.intro)+'</p></div><div class="hero-art">'+heroArt+'<span class="stamp">Feito<br>com carinho</span></div></section><section class="week-heading"><div><h2>'+esc(menu.title)+'</h2><p>'+fmtDate(menu.weekStart,{day:'numeric'})+' a '+fmtDate(addDays(menu.weekStart,4),{day:'numeric',month:'long'})+' · Pedidos até às '+esc(menu.cutoffTime)+' do próprio dia</p></div><span class="pill">'+(menu.accepting?'Escolha os seus dias':'Pedidos fechados')+'</span></section><div class="layout"><div class="menu-grid" id="menuGrid"></div><aside class="summary" id="summary" aria-label="O seu pedido"><h2>O seu pedido</h2><p class="summary-intro">Escolha os dias e envie tudo de uma vez.</p><div id="selectedMeals" aria-live="polite"></div><form id="orderForm"><div class="fields"><label>O seu nome<input id="customerName" name="name" autocomplete="name" required minlength="2" maxlength="80" placeholder="Como se chama?" value="'+esc(customer.name)+'"></label><label>Observações <span class="micro">(opcional)</span><textarea id="customerNote" name="note" maxlength="400" placeholder="Alguma indicação para a cozinha?">'+esc(customer.note)+'</textarea></label><label class="trap" aria-hidden="true">Empresa<input name="website" tabindex="-1" autocomplete="off"></label><label class="check-label"><input id="consent" type="checkbox" required><span>Autorizo o uso do meu nome e das observações para tratar deste pedido.</span></label></div><button class="primary wide submit" id="submitOrder" type="submit" disabled>'+(LIVE?'Enviar pedido →':'Experimentar pedido →')+'</button><p class="fine">'+(LIVE?'O pedido fica registado para a cozinha. Não é efetuado qualquer pagamento nesta página.':'Apenas uma simulação. Nenhum pedido ou email é enviado.')+'</p><p id="orderFeedback" role="alert" hidden></p></form></aside></div>';
+renderCards();renderSelection();$('#orderForm').addEventListener('submit',sendOrder);for(const [id,key]of[['customerName','name'],['customerNote','note']])$('#'+id).addEventListener('input',e=>{customer[key]=e.target.value;requestId=uuid();});}
 function renderCards(){const host=$('#menuGrid');host.innerHTML=menu.days.map((d,i)=>{const c=choices[d.date],closed=isClosed(d);return '<article class="meal '+(c?.want?'selected':'')+'" data-date="'+d.date+'"><div class="photo">'+imageHTML(d,i)+'<span class="day">'+esc(dates[i])+' · '+fmtDate(d.date,{day:'2-digit',month:'2-digit'})+'</span></div><div class="meal-body"><h3>'+esc(d.title||'Ementa por publicar')+'</h3><p class="meal-desc">'+esc(d.description||'')+'</p><div class="price-row"><span class="price">'+(typeof d.price==='number'?money(d.price):'')+'</span><span class="micro">'+(typeof d.price==='number'?'por dose':'')+'</span></div>'+(closed?'<div class="closed">'+(!d.available?'Sem almoço neste dia':'Pedidos indisponíveis')+'</div>':'<div class="choice"><button type="button" class="yes '+(c?.want?'on':'')+'" data-choice="yes" aria-pressed="'+!!c?.want+'">✓ Quero almoço</button><button type="button" class="no '+(c&&c.want===false?'on':'')+'" data-choice="no" aria-pressed="'+!!(c&&c.want===false)+'">Não quero</button></div>'+(c?.want?'<div class="quantity"><span>Quantas doses?</span><div class="stepper"><button type="button" data-qty="-1" aria-label="Diminuir doses de '+esc(dates[i])+'" '+(c.quantity<=1?'disabled':'')+'>−</button><strong>'+c.quantity+'</strong><button type="button" data-qty="1" aria-label="Aumentar doses de '+esc(dates[i])+'" '+(c.quantity>=10?'disabled':'')+'>+</button></div></div>':''))+'</div></article>';}).join('')+'<div class="note-card"><span class="sprig" aria-hidden="true">❧</span><h3>Um dia de cada vez.</h3><p>Escolha «Quero almoço» nos dias que lhe dão jeito. Pode também indicar os dias em que não precisa.</p><p style="margin-top:12px">'+esc(menu.notice)+'</p></div>';
-$$('[data-choice]',host).forEach(b=>b.onclick=()=>{if(sending)return;const date=b.closest('[data-date]').dataset.date;choices[date]={want:b.dataset.choice==='yes',quantity:1};requestId=uuid();renderCards();renderSelection();});$$('[data-qty]',host).forEach(b=>b.onclick=()=>{if(sending)return;const date=b.closest('[data-date]').dataset.date;choices[date].quantity=Math.min(10,Math.max(1,choices[date].quantity+Number(b.dataset.qty)));requestId=uuid();renderCards();renderSelection();});}
+$$('[data-choice]',host).forEach(b=>b.onclick=()=>{if(sending)return;const date=b.closest('[data-date]').dataset.date;choices[date]=b.dataset.choice==='yes'&&choices[date]?.want?choices[date]:{want:b.dataset.choice==='yes',quantity:1,dessertId:'',dessertQuantity:0};requestId=uuid();renderCards();renderSelection();});$$('[data-qty]',host).forEach(b=>b.onclick=()=>{if(sending)return;const date=b.closest('[data-date]').dataset.date;choices[date].quantity=Math.min(10,Math.max(1,choices[date].quantity+Number(b.dataset.qty)));requestId=uuid();renderCards();renderSelection();});}
 function selectedItems(){return menu.days.filter(d=>choices[d.date]&&!isClosed(d)).map(d=>({date:d.date,want:choices[d.date].want,quantity:choices[d.date].want?choices[d.date].quantity:0}));}
 function renderSelection(){const items=selectedItems(),yes=items.filter(x=>x.want);const host=$('#selectedMeals');if(!items.length)host.innerHTML='<div class="empty" style="margin-bottom:22px">A sua semana ainda está por escolher.<br>Selecione os dias na ementa.</div>';else{let total=0,unknown=false;host.innerHTML='<ul class="selection-list">'+items.map(x=>{const d=menu.days.find(d=>d.date===x.date);if(x.want){if(typeof d.price==='number')total+=d.price*x.quantity;else unknown=true;}return '<li><span>'+esc(fmtDate(d.date,{weekday:'long'}))+'<small>'+esc(x.want?d.title:'Sem almoço')+'</small></span><strong>'+ (x.want?x.quantity+' dose'+(x.quantity>1?'s':''):'—')+'</strong></li>';}).join('')+'</ul><div class="total"><span>'+yes.reduce((n,x)=>n+x.quantity,0)+' doses</span><strong>'+(unknown?'A confirmar':money(total))+'</strong></div>';}
 $('#submitOrder').disabled=sending||!items.length;}
@@ -67,6 +72,279 @@ async function publish(event){event.preventDefault();if(uploading)return;const f
 function renderOrders(orders){const current=orders.filter(o=>o.weekStart===draft.weekStart);$('#adminContent').innerHTML='<p class="fine" style="margin-bottom:18px">Semana de '+fmtDate(draft.weekStart,{day:'numeric',month:'long'})+' · '+current.length+' respostas'+(!LIVE?' de teste':'')+'</p><div class="stat-grid">'+draft.days.map((d,i)=>'<div class="stat"><span>'+dates[i].split('-')[0]+'</span><strong>'+current.reduce((n,o)=>n+o.items.filter(x=>x.date===d.date&&x.want).reduce((s,x)=>s+x.quantity,0),0)+'</strong><small>doses pedidas</small></div>').join('')+'</div><div class="panel">'+(current.length?current.map(o=>'<article class="order"><div class="order-top"><strong>'+esc(o.name)+'</strong><span class="micro">'+new Date(o.createdAt).toLocaleString('pt-PT',{timeZone:'Europe/Lisbon',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</span></div><p>'+esc(o.contact)+' · Ref. '+esc(o.id.slice(0,8).toUpperCase())+'</p><ul>'+o.items.map(x=>'<li>'+esc(fmtDate(x.date,{weekday:'long'}))+': '+(x.want?x.quantity+' × '+esc(x.title):'não quer almoço')+'</li>').join('')+'</ul>'+(o.note?'<p>Observação: '+esc(o.note)+'</p>':'')+'<p class="micro">'+(o.emailStatus==='demo'?'Demonstração — nenhum email enviado':o.emailStatus==='sent'?'Aviso por email enviado':'Aviso por email pendente; o pedido está guardado')+'</p></article>').join(''):'<div class="empty">Ainda não há pedidos para esta semana.</div>')+'</div><div class="admin-actions"><span class="fine">Os pedidos conservam o prato e o preço escolhidos no momento do envio.</span><button id="refreshOrders" type="button">Atualizar pedidos</button></div>';$('#refreshOrders').onclick=()=>renderAdmin();}
 $('#publicTab').onclick=async()=>{try{const next=await call('getPublicMenu');if(next.version!==menu.version){choices={};requestId=uuid();}menu=next;renderPublic();}catch(e){notify(e.message);}};$('#brandLink').onclick=e=>{e.preventDefault();$('#publicTab').click();};$('#adminTab').onclick=showAdmin;
 async function init(){$('#demoBanner').hidden=LIVE;$('#footerMode').textContent=LIVE?'Feito para simplificar a semana.':'Prévia · dados apenas neste dispositivo';try{menu=await call('getPublicMenu');renderPublic();}catch(e){$('#app').innerHTML='<div class="login panel"><h2>Já voltamos à mesa.</h2><p>'+esc(e.message)+'</p><button type="button" id="retry">Tentar novamente</button></div>';$('#retry').onclick=init;}}
+
+function sha256Text(text) {
+  const bytes = [];
+  for (const ch of unescape(encodeURIComponent(String(text)))) bytes.push(ch.charCodeAt(0));
+  const bitLength=bytes.length*8;
+  bytes.push(128); while(bytes.length%64!==56)bytes.push(0);
+  const high=Math.floor(bitLength/4294967296),low=bitLength>>>0;
+  for(let s=24;s>=0;s-=8)bytes.push((high>>>s)&255);
+  for(let s=24;s>=0;s-=8)bytes.push((low>>>s)&255);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const k=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  const r=(x,n)=>(x>>>n)|(x<<(32-n));
+  for(let p=0;p<bytes.length;p+=64){
+    const w=new Array(64);
+    for(let i=0;i<16;i++)w[i]=((bytes[p+i*4]<<24)|(bytes[p+i*4+1]<<16)|(bytes[p+i*4+2]<<8)|bytes[p+i*4+3])>>>0;
+    for(let i=16;i<64;i++){const a=w[i-15],b=w[i-2];w[i]=(w[i-16]+(r(a,7)^r(a,18)^(a>>>3))+w[i-7]+(r(b,17)^r(b,19)^(b>>>10)))>>>0;}
+    let [a,b,c,d,e,f,g,j]=h;
+    for(let i=0;i<64;i++){const t1=(j+(r(e,6)^r(e,11)^r(e,25))+((e&f)^(~e&g))+k[i]+w[i])>>>0;const t2=((r(a,2)^r(a,13)^r(a,22))+((a&b)^(a&c)^(b&c)))>>>0;j=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;}
+    [a,b,c,d,e,f,g,j].forEach((v,i)=>h[i]=(h[i]+v)>>>0);
+  }
+  return h.map(v=>v.toString(16).padStart(8,'0')).join('');
+}
+
+const ALLERGENS = [
+ ['gluten','Cereais com glúten'],['crustaceos','Crustáceos'],['ovos','Ovos'],['peixe','Peixe'],
+ ['amendoim','Amendoim'],['soja','Soja'],['leite','Leite (inclui lactose)'],['frutos-casca-rija','Frutos de casca rija'],
+ ['aipo','Aipo'],['mostarda','Mostarda'],['sesamo','Sementes de sésamo'],['sulfitos','Dióxido de enxofre e sulfitos'],
+ ['tremoco','Tremoço'],['moluscos','Moluscos']
+];
+function cents(value){return Math.round(Number(value)*100);}
+function cleanText(value,max,required=false){
+ if(typeof value!=='string')throw Error('Texto inválido.');
+ const s=value.trim(); if(s.length>max||(required&&!s))throw Error('Verifique os campos obrigatórios e o tamanho do texto.');return s;
+}
+function validDate(s){return typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&!isNaN(Date.parse(s+'T12:00:00Z'))&&new Date(s+'T12:00:00Z').toISOString().slice(0,10)===s;}
+function shiftDate(s,n){const d=new Date(s+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+function validateAllergens(item){
+ const allowed=new Set(ALLERGENS.map(x=>x[0]));
+ if(!Array.isArray(item.allergens)||item.allergens.some(x=>!allowed.has(x))||new Set(item.allergens).size!==item.allergens.length)throw Error('Seleção de alergénios inválida.');
+ return {allergens:item.allergens.slice(),allergensReviewed:item.allergensReviewed===true,allergenNotes:cleanText(item.allergenNotes||'',200)};
+}
+function validatePrice(n,required=false){
+ if(n===null&&!required)return null;
+ if(typeof n!=='number'||!Number.isFinite(n)||n<0||n>500)throw Error('Indique um preço válido entre 0 e 500 €.');
+ return cents(n)/100;
+}
+function validateMenuV2(input,allowDemoImages=false){
+ if(!input||!validDate(input.weekStart)||new Date(input.weekStart+'T12:00:00Z').getUTCDay()!==1)throw Error('Escolha uma segunda-feira.');
+ if(!Number.isInteger(input.version)||input.version<1)throw Error('Versão inválida.');
+ if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.cutoffTime||''))throw Error('Hora limite inválida.');
+ if(typeof input.accepting!=='boolean'||!Array.isArray(input.days)||input.days.length!==5||!Array.isArray(input.desserts)||input.desserts.length!==2)throw Error('A ementa precisa de cinco dias e dois espaços de sobremesa.');
+ const days=input.days.map((d,i)=>{
+  if(!d||d.date!==shiftDate(input.weekStart,i)||typeof d.available!=='boolean')throw Error('Dia inválido.');
+  const image=d.image||'';
+  if(typeof image!=='string'||image.length>180000||(image&&!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(image)&&!(allowDemoImages&&image.startsWith('data:image/svg+xml;charset=utf-8,'))))throw Error('Fotografia inválida.');
+  return {date:d.date,title:cleanText(d.title||'',100,d.available),description:cleanText(d.description||'',220),price:validatePrice(d.price),image,available:d.available,...validateAllergens(d)};
+ });
+ const desserts=input.desserts.map((d,i)=>{
+  if(!d||d.id!==['dessert-a','dessert-b'][i]||typeof d.available!=='boolean')throw Error('Sobremesa inválida.');
+  return {id:d.id,title:cleanText(d.title||'',80,d.available),price:validatePrice(d.price,d.available),available:d.available,...validateAllergens(d)};
+ });
+ return {version:input.version,weekStart:input.weekStart,title:cleanText(input.title,70,true),intro:cleanText(input.intro||'',240),notice:cleanText(input.notice||'',300),cutoffTime:input.cutoffTime,accepting:input.accepting,days,desserts};
+}
+function makeOrderV2(input,menu,now,allowPast=false){
+ if(!input||input.website||input.consent!==true)throw Error('Pedido inválido. Confirme a utilização do nome para tratar do pedido.');
+ if(typeof input.id!=='string'||!/^[A-Za-z0-9-]{20,80}$/.test(input.id))throw Error('Referência inválida.');
+ if(input.version!==menu.version)throw Error('A ementa mudou. Atualize a página antes de enviar.');
+ if(!menu.accepting)throw Error('Os pedidos estão fechados.');
+ const name=cleanText(input.name,80,true);if(name.length<2)throw Error('Indique o seu nome.');
+ const note=cleanText(input.note||'',400);
+ if(!Array.isArray(input.items)||!input.items.length||input.items.length>5)throw Error('Escolha pelo menos um dia.');
+ const seen=new Set();let totalCents=0,unknownPrice=false;
+ const items=input.items.map(x=>{
+  if(!x||seen.has(x.date)||typeof x.want!=='boolean')throw Error('Escolha de dia inválida.');seen.add(x.date);
+  const day=menu.days.find(d=>d.date===x.date);
+  if(!day||!day.available||!day.title)throw Error('Um dos dias já não está disponível.');
+  if(!allowPast&&(day.date<now.date||(day.date===now.date&&now.time>=menu.cutoffTime)))throw Error('Já passou a hora limite para um dos dias.');
+  if(!Number.isInteger(x.quantity)||x.quantity<(x.want?1:0)||x.quantity>(x.want?10:0))throw Error('Quantidade de almoços inválida.');
+  const dessertId=x.dessertId||'',dq=x.dessertQuantity??0;
+  if(!Number.isInteger(dq)||dq<0||dq>x.quantity)throw Error('Quantidade de sobremesas inválida.');
+  if((!x.want&&(dessertId||dq))||(!dessertId&&dq))throw Error('A sobremesa deve acompanhar um almoço.');
+  let dessert=null;
+  if(dessertId){
+   const d=menu.desserts.find(d=>d.id===dessertId&&d.available);
+   if(!d||!d.title||dq<1||typeof d.price!=='number')throw Error('A sobremesa escolhida já não está disponível.');
+   dessert={id:d.id,title:d.title,quantity:dq,unitCents:cents(d.price),allergens:d.allergens.slice(),allergensReviewed:d.allergensReviewed,allergenNotes:d.allergenNotes||''};
+   totalCents+=dessert.unitCents*dq;
+  }
+  if(x.want){if(typeof day.price==='number')totalCents+=cents(day.price)*x.quantity;else unknownPrice=true;}
+  return {date:day.date,title:day.title,want:x.want,quantity:x.quantity,unitCents:typeof day.price==='number'?cents(day.price):null,allergens:day.allergens.slice(),allergensReviewed:day.allergensReviewed,allergenNotes:day.allergenNotes||'',dessert};
+ });
+ return {id:input.id,version:menu.version,weekStart:menu.weekStart,name,note,items,totalCents,unknownPrice};
+}
+
+
+/* Versão 2. A proteção real está no servidor; o bloqueio local serve só para testar a prévia. */
+const DEMO_CODE_DIGEST = '9de003e749c3099f88edfa7d4f7675422764113870e1ada08de883d5f7273987';
+let demoSession='';
+function enrichMenu(m){
+ m.days=m.days.map(d=>({...d,allergens:Array.isArray(d.allergens)?d.allergens:[],allergensReviewed:d.allergensReviewed===true,allergenNotes:d.allergenNotes||''}));
+ if(!Array.isArray(m.desserts)||m.desserts.length!==2)m.desserts=[
+ {id:'dessert-a',title:'Mousse de chocolate',price:2,available:true,allergens:[],allergensReviewed:false,allergenNotes:''},
+ {id:'dessert-b',title:'Arroz doce',price:1.5,available:true,allergens:[],allergensReviewed:false,allergenNotes:''}
+ ];
+ m.desserts=m.desserts.map(d=>({...d,allergens:Array.isArray(d.allergens)?d.allergens:[],allergensReviewed:d.allergensReviewed===true,allergenNotes:d.allergenNotes||''}));
+ return m;
+}
+demo.menu=enrichMenu(demo.menu);
+function allergenInfo(d){
+ const selected=ALLERGENS.filter(x=>(d.allergens||[]).includes(x[0])).map(x=>x[1]);
+ return '<div class="allergen-info"><strong>Alergénios</strong><p>'+
+ (selected.length?esc(selected.join(' · ')):(d.allergensReviewed?'Nenhum alergénio assinalado pela cozinha.':'Informação por confirmar com a cozinha.'))+
+ (!d.allergensReviewed&&selected.length?'<br><em>Informação ainda por confirmar.</em>':'')+
+ (d.allergenNotes?'<br>'+esc(d.allergenNotes):'')+'</p></div>';
+}
+function allergenEditor(d,prefix){
+ return '<details class="allergen-editor"><summary>Alergénios deste alimento</summary><div class="allergen-checks">'+ALLERGENS.map(x=>'<label class="check-label"><input type="checkbox" data-allergen="'+x[0]+'" '+((d.allergens||[]).includes(x[0])?'checked':'')+'>'+esc(x[1])+'</label>').join('')+'</div><label class="check-label"><input type="checkbox" data-reviewed '+(d.allergensReviewed?'checked':'')+'>Informação revista pela cozinha</label><label style="margin-top:13px">Detalhes <span class="micro">(opcional)</span><input data-allergen-notes maxlength="200" placeholder="Ex.: trigo, amêndoas ou indicação de vestígios" value="'+esc(d.allergenNotes||'')+'"></label></details>';
+}
+function collectAllergens(el){return {allergens:$$('[data-allergen]:checked',el).map(e=>e.dataset.allergen),allergensReviewed:$('[data-reviewed]',el).checked,allergenNotes:$('[data-allergen-notes]',el).value.trim()};}
+call=async function(method,...args){
+ if(!LIVE)return demoCall(method,...args);
+ const endpoint={getPublicMenu:['GET','menu'],adminLogin:['POST','login'],adminLogout:['POST','logout'],getAdminData:['GET','admin'],publishMenu:['PUT','menu'],submitOrder:['POST','orders'],retryEmail:['POST','email/retry']}[method];
+ if(!endpoint)throw Error('Operação inválida.');
+ const headers={'Accept':'application/json'};
+ if(['adminLogout','getAdminData','publishMenu','retryEmail'].includes(method))headers.Authorization='Bearer '+args[0];
+ let body;
+ if(method==='adminLogin')body={code:args[0]};
+ if(method==='publishMenu')body=args[1];
+ if(method==='submitOrder')body=args[0];
+ if(method==='retryEmail')body={id:args[1]};
+ if(body)headers['Content-Type']='application/json';
+ const response=await fetch(API_URL.replace(/\/$/,'')+'/api/'+endpoint[1],{method:endpoint[0],headers,body:body?JSON.stringify(body):undefined,cache:'no-store'});
+ const result=await response.json();
+ if(!response.ok)throw Error(result.error||'Não foi possível concluir. Tente novamente.');
+ return result;
+};
+demoCall=async function(method,...args){
+ if(method==='getPublicMenu')return structuredClone(demo.menu);
+ if(method==='adminLogin'){
+  const password=String(args[0]||'');
+  if(sha256Text(password)!==DEMO_CODE_DIGEST)throw Error('Código incorreto.');
+  demoSession=uuid();return demoSession;
+ }
+ if(['adminLogout','getAdminData','publishMenu'].includes(method)&&(!demoSession||args[0]!==demoSession))throw Error('Entre novamente na cozinha.');
+ if(method==='adminLogout'){demoSession='';return true;}
+ if(method==='getAdminData')return structuredClone(demo);
+ if(method==='publishMenu'){
+  const next=validateMenuV2(args[1],true);
+  if(next.version!==demo.menu.version)throw Error('A ementa mudou. Atualize o painel.');
+  next.version++;demo.menu=next;persistDemo();return structuredClone(next);
+ }
+ if(method==='submitOrder'){
+  const p=args[0],digest=sha256Text(JSON.stringify(p)),old=demo.orders.find(o=>o.id===p.id);
+  if(old){if(old.digest!==digest)throw Error('Esta referência já foi usada.');return {id:old.id,emailStatus:'demo'};}
+  const order=makeOrderV2(p,demo.menu,localDateTime(),true);
+  demo.orders.unshift({...order,createdAt:new Date().toISOString(),emailStatus:'demo',digest});persistDemo();
+  return {id:order.id,emailStatus:'demo'};
+ }
+ throw Error('Operação indisponível.');
+};
+const originalPublic=renderPublic;
+renderPublic=function(){
+ originalPublic();
+ const contactField=$('#customerContact');
+ if(contactField)contactField.closest('label').remove();
+ const consentLabel=$('#consent')?.nextElementSibling;
+ if(consentLabel)consentLabel.textContent='Autorizo o uso do meu nome e das observações para tratar deste pedido.';
+};
+const originalCards=renderCards;
+renderCards=function(){
+ for(const c of Object.values(choices)){
+  if(!c.want){c.dessertId='';c.dessertQuantity=0;}
+  if(c.dessertId&&!menu.desserts.some(d=>d.id===c.dessertId&&d.available)){c.dessertId='';c.dessertQuantity=0;}
+  c.dessertQuantity=c.dessertId?Math.max(1,Math.min(c.quantity,c.dessertQuantity||1)):0;
+ }
+ originalCards();
+ $$('.meal[data-date]').forEach(article=>{
+  const d=menu.days.find(x=>x.date===article.dataset.date),c=choices[d.date];
+  $('.meal-desc',article).insertAdjacentHTML('afterend',allergenInfo(d));
+  if(!c?.want||isClosed(d))return;
+  const available=menu.desserts.filter(x=>x.available&&x.title);
+  if(!available.length)return;
+  const chosen=available.find(x=>x.id===c.dessertId);
+  $('.meal-body',article).insertAdjacentHTML('beforeend','<div class="dessert-choice"><label>Quer sobremesa?<select data-dessert><option value="">Sem sobremesa</option>'+available.map(x=>'<option value="'+x.id+'" '+(x.id===c.dessertId?'selected':'')+'>'+esc(x.title)+' · +'+money(x.price)+'</option>').join('')+'</select></label>'+(chosen?'<div class="dessert-detail"><label>Porções de sobremesa<select data-dessert-qty>'+Array.from({length:c.quantity},(_,i)=>i+1).map(n=>'<option value="'+n+'" '+(n===c.dessertQuantity?'selected':'')+'>'+n+'</option>').join('')+'</select></label>'+allergenInfo(chosen)+'</div>':'')+'</div>');
+  $('[data-dessert]',article).onchange=e=>{if(sending)return;c.dessertId=e.target.value;c.dessertQuantity=c.dessertId?c.quantity:0;requestId=uuid();renderCards();renderSelection();};
+  const q=$('[data-dessert-qty]',article);if(q)q.onchange=e=>{if(sending)return;c.dessertQuantity=Number(e.target.value);requestId=uuid();renderSelection();};
+ });
+};
+selectedItems=function(){
+ return menu.days.filter(d=>choices[d.date]&&!isClosed(d)).map(d=>{
+  const c=choices[d.date],dessert=menu.desserts.find(x=>x.id===c.dessertId&&x.available);
+  return {date:d.date,want:c.want,quantity:c.want?c.quantity:0,dessertId:c.want&&dessert?dessert.id:'',dessertQuantity:c.want&&dessert?Math.min(c.quantity,c.dessertQuantity||c.quantity):0};
+ });
+};
+renderSelection=function(){
+ const items=selectedItems(),host=$('#selectedMeals');let total=0,unknown=false;
+ if(!items.length)host.innerHTML='<div class="empty" style="margin-bottom:22px">Escolha os dias na ementa.</div>';
+ else{
+ host.innerHTML='<ul class="selection-list">'+items.map(x=>{
+  const d=menu.days.find(d=>d.date===x.date),dessert=menu.desserts.find(d=>d.id===x.dessertId);
+  if(x.want){if(typeof d.price==='number')total+=cents(d.price)*x.quantity;else unknown=true;}
+  if(dessert)total+=cents(dessert.price)*x.dessertQuantity;
+  return '<li><span>'+esc(fmtDate(x.date,{weekday:'long'}))+'<small>'+esc(x.want?d.title:'Sem almoço')+'</small>'+(dessert?'<small class="dessert-summary">+ '+x.dessertQuantity+' × '+esc(dessert.title)+' · '+money(dessert.price*x.dessertQuantity)+'</small>':'')+'</span><strong>'+(x.want?x.quantity+' dose'+(x.quantity>1?'s':''):'—')+'</strong></li>';
+ }).join('')+'</ul><div class="total"><span>Total'+(unknown?' conhecido':'')+'</span><strong>'+money(total/100)+'</strong></div>'+(unknown?'<p class="fine" style="margin-bottom:15px">Há almoços com preço por confirmar. O valor acima inclui os preços já definidos.</p>':'');
+ }
+ const submit=$('#submitOrder');if(submit)submit.disabled=sending||!items.length;
+};
+sendOrder=async function(event){
+ event.preventDefault();if(sending)return;const items=selectedItems();if(!items.length)return;
+ const form=event.currentTarget;
+ const payload={id:requestId,version:menu.version,name:$('#customerName').value.trim(),note:$('#customerNote').value.trim(),website:form.elements.website.value,consent:$('#consent').checked,items};
+ try{makeOrderV2(payload,menu,localDateTime(),!LIVE);}catch(e){feedback($('#orderFeedback'),e.message);return;}
+ sending=true;busy(true);$$('#menuGrid button,#menuGrid select').forEach(e=>e.disabled=true);$('#submitOrder').disabled=true;$('#submitOrder').textContent='A registar…';
+ try{
+  const result=await call('submitOrder',payload);
+  $('#summary').innerHTML='<div class="success-card" role="status"><div class="success-icon">✓</div><h3>'+(LIVE?'Pedido registado.':'Simulação concluída.')+'</h3><p>'+(LIVE?'O seu pedido, incluindo as sobremesas, ficou guardado para a cozinha.':'Veja o teste em A cozinha → Pedidos. Nenhum email foi enviado.')+'</p><p class="order-code">Ref. '+esc(result.id.slice(0,8).toUpperCase())+'</p>'+(result.emailStatus==='pending'?'<p>O aviso por email está pendente. Não precisa de repetir o pedido.</p>':'')+'</div><button class="wide" id="anotherOrder" type="button" style="margin-top:18px">Voltar à ementa</button>';
+  choices={};requestId=uuid();$('#anotherOrder').onclick=()=>renderPublic();
+  $('#summary').scrollIntoView({behavior:'smooth',block:'center'});
+ }catch(e){feedback($('#orderFeedback'),e.message);$('#submitOrder').textContent=LIVE?'Enviar pedido →':'Experimentar pedido →';$('#submitOrder').disabled=false;}
+ finally{sending=false;busy(false);renderCards();}
+};
+showAdmin=async function(){
+ view='admin';$('#adminTab').classList.add('active');$('#publicTab').classList.remove('active');
+ if(token){await renderAdmin();return;}
+ $('#app').innerHTML='<section class="login panel"><span class="eyebrow">A cozinha</span><h2>Entrada reservada.</h2><p>Introduza o código para gerir a ementa e os pedidos.</p><form id="loginForm"><label>Código da cozinha<input id="adminPassword" type="password" required maxlength="200" autocomplete="current-password"></label><button class="primary wide" type="submit">Entrar →</button><p id="loginFeedback" role="alert" hidden></p></form>'+(!LIVE?'<p class="fine">Prévia local: este código permite testar o painel. A proteção de dados partilhados só fica ativa com a ligação ao servidor.</p>':'')+'</section>';
+ $('#loginForm').onsubmit=async e=>{
+  e.preventDefault();const b=$('button',e.currentTarget);b.disabled=true;
+  try{token=await call('adminLogin',$('#adminPassword').value);await renderAdmin();}
+  catch(err){feedback($('#loginFeedback'),err.message);b.disabled=false;}
+ };
+};
+const originalEditor=renderEditor;
+renderEditor=function(){
+ originalEditor();
+ $$('.edit-day').forEach((el,i)=>$('.edit-grid',el).insertAdjacentHTML('beforeend','<div class="full">'+allergenEditor(draft.days[i],'day-'+i)+'</div>'));
+ $('#editDays').insertAdjacentHTML('afterend','<section class="panel"><h2 style="font-size:1.7rem">Sobremesas da semana</h2><p class="fine" style="margin:0 0 18px">Estas duas opções ficam disponíveis em todos os dias. O preço é adicional por porção.</p><div class="dessert-editors">'+draft.desserts.map((d,i)=>'<section class="dessert-editor" data-dessert-index="'+i+'"><h3>Opção '+(i+1)+'</h3><div class="edit-grid"><label>Nome da sobremesa<input data-dessert-name maxlength="80" value="'+esc(d.title)+'"></label><label>Preço (€)<input data-dessert-price type="number" min="0" max="500" step=".01" value="'+(typeof d.price==='number'?d.price:'')+'"></label><label class="check-label full"><input type="checkbox" data-dessert-available '+(d.available?'checked':'')+'>Disponível esta semana</label><div class="full">'+allergenEditor(d,'dessert-'+i)+'</div></div></section>').join('')+'</div></section>');
+ $('#menuForm').onsubmit=publish;
+};
+publish=async function(event){
+ event.preventDefault();if(uploading)return;const form=event.currentTarget,start=form.elements.weekStart.value;
+ const input={version:selectedRevision,weekStart:start,title:form.elements.title.value.trim(),intro:form.elements.intro.value.trim(),notice:form.elements.notice.value.trim(),cutoffTime:form.elements.cutoffTime.value,accepting:form.elements.accepting.checked,
+ days:$$('.edit-day').map((el,i)=>{const p=$('[data-field="price"]',el).value;return {date:addDays(start,i),title:$('[data-field="title"]',el).value.trim(),description:$('[data-field="description"]',el).value.trim(),price:p===''?null:Number(p),available:$('[data-field="available"]',el).checked,image:draft.days[i].image||'',...collectAllergens(el)};}),
+ desserts:$$('.dessert-editor').map((el,i)=>{const p=$('[data-dessert-price]',el).value;return {id:['dessert-a','dessert-b'][i],title:$('[data-dessert-name]',el).value.trim(),price:p===''?null:Number(p),available:$('[data-dessert-available]',el).checked,...collectAllergens(el)};})
+ };
+ let next;try{next=validateMenuV2(input,!LIVE);}catch(e){feedback($('#publishFeedback'),e.message);return;}
+ const b=$('#publishButton');b.disabled=true;b.textContent='A publicar…';
+ try{menu=enrichMenu(await call('publishMenu',token,next));choices={};requestId=uuid();notify(LIVE?'Ementa e sobremesas publicadas.':'Ementa de demonstração atualizada.');renderPublic();window.scrollTo({top:0,behavior:'smooth'});}
+ catch(e){feedback($('#publishFeedback'),e.message);b.disabled=false;b.textContent='Publicar ementa →';}
+};
+renderOrders=function(orders){
+ const current=orders.filter(o=>o.weekStart===draft.weekStart);
+ const rows=current.map(o=>({...o,items:o.items.map(x=>({...x,dessert:x.dessert||null}))}));
+ $('#adminContent').innerHTML='<p class="fine" style="margin-bottom:18px">Semana de '+fmtDate(draft.weekStart,{day:'numeric',month:'long'})+' · '+current.length+' respostas'+(!LIVE?' de teste':'')+'</p><div class="stat-grid">'+draft.days.map((d,i)=>'<div class="stat"><span>'+dates[i].split('-')[0]+'</span><strong>'+rows.reduce((n,o)=>n+o.items.filter(x=>x.date===d.date&&x.want).reduce((s,x)=>s+x.quantity,0),0)+'</strong><small>almoços · '+rows.reduce((n,o)=>n+o.items.filter(x=>x.date===d.date).reduce((s,x)=>s+(x.dessert?.quantity||0),0),0)+' sobremesas</small></div>').join('')+'</div><div class="panel"><h3>Sobremesas por preparar</h3>'+draft.days.map(d=>{
+  const sums={};for(const o of rows)for(const x of o.items){if(x.date===d.date&&x.dessert){const key=x.dessert.title;sums[key]=(sums[key]||0)+x.dessert.quantity;}}
+  return '<p class="fine"><strong>'+esc(fmtDate(d.date,{weekday:'long'}))+'</strong> · '+(Object.keys(sums).length?Object.entries(sums).map(([name,n])=>n+' × '+esc(name)).join(' · '):'Sem sobremesas pedidas')+'</p>';
+ }).join('')+'</div><div class="panel">'+(rows.length?rows.map(o=>'<article class="order" data-order="'+esc(o.id)+'"><div class="order-top"><strong>'+esc(o.name)+'</strong><span class="micro">'+new Date(o.createdAt).toLocaleString('pt-PT',{timeZone:'Europe/Lisbon',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</span></div><p>Ref. '+esc(o.id.slice(0,8).toUpperCase())+'</p><ul>'+o.items.map(x=>'<li>'+esc(fmtDate(x.date,{weekday:'long'}))+': '+(x.want?x.quantity+' × '+esc(x.title):'não quer almoço')+(x.dessert?'<br><strong>+ '+x.dessert.quantity+' × '+esc(x.dessert.title)+'</strong>':'')+'</li>').join('')+'</ul>'+(o.note?'<p><strong>Observações:</strong> '+esc(o.note)+'</p>':'')+(typeof o.totalCents==='number'?'<p><strong>Total'+(o.unknownPrice?' conhecido':'')+': '+money(o.totalCents/100)+'</strong></p>':'')+(LIVE&&o.emailStatus!=='sent'&&Date.now()-Date.parse(o.createdAt)<23*3600*1000?'<button type="button" data-retry-email>Repetir aviso por email</button>':'')+'<p class="micro">'+(o.emailStatus==='demo'?'Demonstração — nenhum email enviado':o.emailStatus==='sent'?'Aviso por email enviado':o.emailStatus==='disabled'?'Avisos por email ainda não configurados':'Aviso por email pendente; o pedido está guardado')+'</p></article>').join(''):'<div class="empty">Ainda não há pedidos para esta semana.</div>')+'</div><div class="admin-actions"><p class="fine">Os pedidos mantêm os pratos, sobremesas e preços escolhidos no envio.</p><button type="button" id="refreshOrders">Atualizar pedidos</button></div>';
+ $('#refreshOrders').onclick=()=>renderAdmin();
+ $$('[data-retry-email]').forEach(button=>button.onclick=async()=>{
+  button.disabled=true;
+  try{const result=await call('retryEmail',token,button.closest('[data-order]').dataset.order);notify(result.emailStatus==='sent'?'Aviso por email enviado.':'O email continua pendente. O pedido está guardado.');await renderAdmin();}
+  catch(e){notify(e.message);button.disabled=false;}
+ });
+};
+const oldInit=init;
+init=async function(){
+ $('#demoBanner').hidden=LIVE;$('#footerMode').textContent=LIVE?'Feito para simplificar a semana.':'Prévia · dados apenas neste dispositivo';
+ if(!LIVE)$('#demoBanner').innerHTML='<strong>Demonstração</strong> · Dados apenas neste dispositivo. Nenhum pedido ou email é enviado.';
+ try{menu=enrichMenu(await call('getPublicMenu'));renderPublic();}
+ catch(e){$('#app').innerHTML='<div class="login panel"><h2>Já voltamos à mesa.</h2><p>'+esc(e.message)+'</p><button id="retry" type="button">Tentar novamente</button></div>';$('#retry').onclick=init;}
+};
+$('#adminTab').onclick=()=>showAdmin();
+$('#publicTab').onclick=async()=>{try{const next=enrichMenu(await call('getPublicMenu'));if(!menu||next.version!==menu.version){choices={};requestId=uuid();}menu=next;renderPublic();}catch(e){notify(e.message);}};
+
 init();
 </script>
 </body>
