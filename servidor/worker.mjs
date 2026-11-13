@@ -1,5 +1,5 @@
 /* A Mesa — API para GitHub Pages. Segredos apenas nas definições do Worker. */
-import {validateMenuV2,makeOrderV2} from './validation.mjs';
+import {validateMenu,makeOrder,orderView} from './validation.mjs';
 
 class HttpError extends Error { constructor(status,message){super(message);this.status=status;} }
 const fail=(status,message)=>{throw new HttpError(status,message);};
@@ -15,9 +15,9 @@ function localNow(date=new Date()){
 function initialMenu(){
  const date=new Date(localNow().date+'T12:00:00Z');date.setUTCDate(date.getUTCDate()-(date.getUTCDay()+6)%7);
  const start=date.toISOString().slice(0,10),blank={allergens:[],allergensReviewed:false,allergenNotes:''};
- return {version:1,weekStart:start,title:'A ementa desta semana',intro:'Comida caseira, feita com carinho.',notice:'Consulte os ingredientes e alergénios com a cozinha.',cutoffTime:'10:00',accepting:false,
- days:Array.from({length:5},(_,i)=>{const d=new Date(date);d.setUTCDate(d.getUTCDate()+i);return {date:d.toISOString().slice(0,10),title:'',description:'',price:null,image:'',available:false,...blank};}),
- desserts:['dessert-a','dessert-b'].map(id=>({id,title:'',price:null,available:false,...blank}))};
+ return {schemaVersion:3,version:1,weekStart:start,title:'A ementa desta semana',intro:'Comida caseira, feita com carinho.',notice:'Consulte os ingredientes e alergénios com a cozinha.',cutoffTime:'10:00',accepting:false,
+ days:Array.from({length:5},(_,i)=>{const d=new Date(date);d.setUTCDate(d.getUTCDate()+i);return {date:d.toISOString().slice(0,10),title:'',description:'',image:'',available:false,...blank};}),
+ desserts:['dessert-a','dessert-b'].map(id=>({id,title:'',available:false,...blank}))};
 }
 async function readBody(request,max){
  if(!request.headers.get('Content-Type')?.toLowerCase().startsWith('application/json'))fail(415,'Formato inválido.');
@@ -32,7 +32,7 @@ function validated(fn){try{return fn();}catch(e){fail(400,e.message);}}
 async function getMenu(env){
  const seed=initialMenu();
  await env.DB.prepare('INSERT OR IGNORE INTO menu (id,version,data) VALUES (1,1,?)').bind(JSON.stringify(seed)).run();
- const row=await env.DB.prepare('SELECT data FROM menu WHERE id=1').first();return JSON.parse(row.data);
+ const row=await env.DB.prepare('SELECT data FROM menu WHERE id=1').first();return validateMenu(JSON.parse(row.data));
 }
 async function rateLimit(env,request,scope,max,seconds){
  const now=Math.floor(Date.now()/1000),bucket=Math.floor(now/seconds);
@@ -44,27 +44,26 @@ async function rateLimit(env,request,scope,max,seconds){
 async function requireAdmin(request,env){
  const auth=request.headers.get('Authorization')||'';
  if(!/^Bearer [a-f0-9]{64}$/.test(auth))fail(401,'Entre novamente na cozinha.');
- const tokenHash=await hash(auth.slice(7));
+ const tokenHash=await hash(env.ADMIN_CODE+'\0'+auth.slice(7));
  const row=await env.DB.prepare('SELECT expires FROM sessions WHERE token_hash=?').bind(tokenHash).first();
  if(!row||row.expires<=Math.floor(Date.now()/1000))fail(401,'A sessão terminou. Entre novamente.');
  return tokenHash;
 }
 function emailConfigured(env){return !!(env.RESEND_API_KEY&&env.EMAIL_FROM&&env.ORDERS_EMAIL);}
 function emailText(order){
- const eur=c=>(c/100).toLocaleString('pt-PT',{style:'currency',currency:'EUR'});
- const lines=['Novo pedido: '+order.name,'Referência: '+order.id,'Semana: '+order.weekStart,''];
+ const lines=['Pedido de ementa: '+order.name,'Referência: '+order.id,'Semana: '+order.weekStart,''];
  for(const item of order.items){
-  lines.push(item.date+': '+(item.want?item.quantity+' × '+item.title:'não quer almoço'));
-  if(item.dessert)lines.push('  Sobremesa: '+item.dessert.quantity+' × '+item.dessert.title+' ('+eur(item.dessert.unitCents)+' / porção)');
+  lines.push(item.date+': '+(item.want?item.quantity+' × '+item.title:'sem almoço'));
+  lines.push(item.dessert?'  Sobremesa: '+item.dessert.quantity+' × '+item.dessert.title:'  Sem sobremesa');
  }
- lines.push('','Total'+(order.unknownPrice?' conhecido':'')+': '+eur(order.totalCents),'Observações: '+(order.note||'Sem observações.'));
+ lines.push('','Observações: '+(order.note||'Sem observações.'));
  return lines.join('\n');
 }
 async function sendNotice(env,order){
  if(!emailConfigured(env))return 'disabled';
  try{
   const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json','Idempotency-Key':'almoco-'+order.id},
-   body:JSON.stringify({from:env.EMAIL_FROM,to:[env.ORDERS_EMAIL],subject:'Pedido de almoço — '+order.id.slice(0,8).toUpperCase(),text:emailText(order)}),
+   body:JSON.stringify({from:env.EMAIL_FROM,to:[env.ORDERS_EMAIL],subject:'Pedido de ementa — '+order.id.slice(0,8).toUpperCase(),text:emailText(order)}),
    signal:AbortSignal.timeout(8000)});
   if(!response.ok)return 'pending';
   return 'sent';
@@ -86,7 +85,7 @@ async function route(request,env,ctx){
   if(typeof input?.code!=='string'||input.code.length>200)fail(401,'Código incorreto.');
   if(!safeEqual(await hash(input.code),await hash(env.ADMIN_CODE)))fail(401,'Código incorreto.');
   const token=randomToken();
-  await env.DB.prepare('INSERT INTO sessions (token_hash,expires) VALUES (?,?)').bind(await hash(token),Math.floor(Date.now()/1000)+8*3600).run();
+  await env.DB.prepare('INSERT INTO sessions (token_hash,expires) VALUES (?,?)').bind(await hash(env.ADMIN_CODE+'\0'+token),Math.floor(Date.now()/1000)+8*3600).run();
   return json(token);
  }
  if(method==='POST'&&path==='/api/logout'){
@@ -96,11 +95,11 @@ async function route(request,env,ctx){
  if(method==='GET'&&path==='/api/admin'){
   await requireAdmin(request,env);const menu=await getMenu(env);
   const data=await env.DB.prepare('SELECT data,email_status FROM orders WHERE week_start=? ORDER BY created_at DESC').bind(menu.weekStart).all();
-  return json({menu,orders:data.results.map(row=>({...JSON.parse(row.data),emailStatus:row.email_status}))});
+  return json({menu,orders:data.results.map(row=>({...orderView(JSON.parse(row.data)),emailStatus:row.email_status}))});
  }
  if(method==='PUT'&&path==='/api/menu'){
   await requireAdmin(request,env);
-  const input=await readBody(request,950000),next=validated(()=>validateMenuV2(input));
+  const input=await readBody(request,950000),next=validated(()=>validateMenu(input));
   await getMenu(env);
   const oldVersion=next.version;next.version++;
   const result=await env.DB.prepare('UPDATE menu SET version=?,data=? WHERE id=1 AND version=?').bind(next.version,JSON.stringify(next),oldVersion).run();
@@ -111,11 +110,11 @@ async function route(request,env,ctx){
   await rateLimit(env,request,'orders',60,3600);
   const input=await readBody(request,16000);
   if(typeof input?.id!=='string'||!/^[A-Za-z0-9-]{20,80}$/.test(input.id))fail(400,'Referência inválida.');
-  // Include the request fields only. Extra client prices or totals have no authority.
-  const relevant={id:input.id,version:input.version,name:input.name,note:input.note||'',website:input.website||'',consent:input.consent,items:input.items};
+  // Keep only the fields accepted by the organiser.
+  const relevant={schemaVersion:input.schemaVersion,id:input.id,version:input.version,name:input.name,note:input.note||'',website:input.website||'',consent:input.consent,items:input.items};
   const digest=await hash(JSON.stringify(relevant));
   const previous=await existingOrder(env,input.id,digest);if(previous)return json(previous);
-  const menu=await getMenu(env),order=validated(()=>makeOrderV2(relevant,menu,localNow()));
+  const menu=await getMenu(env),order=validated(()=>makeOrder(relevant,menu,localNow()));
   const createdAt=new Date().toISOString();order.createdAt=createdAt;
   const status=emailConfigured(env)?'pending':'disabled';
   const result=await env.DB.prepare('INSERT OR IGNORE INTO orders (id,week_start,created_at,fingerprint,data,email_status) SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM menu WHERE id=1 AND version=?)')

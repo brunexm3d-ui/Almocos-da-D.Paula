@@ -5,7 +5,6 @@ const ALLERGENS = [
  ['aipo','Aipo'],['mostarda','Mostarda'],['sesamo','Sementes de sésamo'],['sulfitos','Dióxido de enxofre e sulfitos'],
  ['tremoco','Tremoço'],['moluscos','Moluscos']
 ];
-function cents(value){return Math.round(Number(value)*100);}
 function cleanText(value,max,required=false){
  if(typeof value!=='string')throw Error('Texto inválido.');
  const s=value.trim(); if(s.length>max||(required&&!s))throw Error('Verifique os campos obrigatórios e o tamanho do texto.');return s;
@@ -17,12 +16,7 @@ function validateAllergens(item){
  if(!Array.isArray(item.allergens)||item.allergens.some(x=>!allowed.has(x))||new Set(item.allergens).size!==item.allergens.length)throw Error('Seleção de alergénios inválida.');
  return {allergens:item.allergens.slice(),allergensReviewed:item.allergensReviewed===true,allergenNotes:cleanText(item.allergenNotes||'',200)};
 }
-function validatePrice(n,required=false){
- if(n===null&&!required)return null;
- if(typeof n!=='number'||!Number.isFinite(n)||n<0||n>500)throw Error('Indique um preço válido entre 0 e 500 €.');
- return cents(n)/100;
-}
-function validateMenuV2(input,allowDemoImages=false){
+function validateMenu(input,allowDemoImages=false){
  if(!input||!validDate(input.weekStart)||new Date(input.weekStart+'T12:00:00Z').getUTCDay()!==1)throw Error('Escolha uma segunda-feira.');
  if(!Number.isInteger(input.version)||input.version<1)throw Error('Versão inválida.');
  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.cutoffTime||''))throw Error('Hora limite inválida.');
@@ -31,43 +25,53 @@ function validateMenuV2(input,allowDemoImages=false){
   if(!d||d.date!==shiftDate(input.weekStart,i)||typeof d.available!=='boolean')throw Error('Dia inválido.');
   const image=d.image||'';
   if(typeof image!=='string'||image.length>180000||(image&&!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(image)&&!(allowDemoImages&&image.startsWith('data:image/svg+xml;charset=utf-8,'))))throw Error('Fotografia inválida.');
-  return {date:d.date,title:cleanText(d.title||'',100,d.available),description:cleanText(d.description||'',220),price:validatePrice(d.price),image,available:d.available,...validateAllergens(d)};
+  return {date:d.date,title:cleanText(d.title||'',100,d.available),description:cleanText(d.description||'',220),image,available:d.available,...validateAllergens(d)};
  });
  const desserts=input.desserts.map((d,i)=>{
   if(!d||d.id!==['dessert-a','dessert-b'][i]||typeof d.available!=='boolean')throw Error('Sobremesa inválida.');
-  return {id:d.id,title:cleanText(d.title||'',80,d.available),price:validatePrice(d.price,d.available),available:d.available,...validateAllergens(d)};
+  return {id:d.id,title:cleanText(d.title||'',80,d.available),available:d.available,...validateAllergens(d)};
  });
- return {version:input.version,weekStart:input.weekStart,title:cleanText(input.title,70,true),intro:cleanText(input.intro||'',240),notice:cleanText(input.notice||'',300),cutoffTime:input.cutoffTime,accepting:input.accepting,days,desserts};
+ return {schemaVersion:3,version:input.version,weekStart:input.weekStart,title:cleanText(input.title,70,true),intro:cleanText(input.intro||'',240),notice:cleanText(input.notice||'',300),cutoffTime:input.cutoffTime,accepting:input.accepting,days,desserts};
 }
-function makeOrderV2(input,menu,now,allowPast=false){
- if(!input||input.website||input.consent!==true)throw Error('Pedido inválido. Confirme a utilização do nome para tratar do pedido.');
+
+const MAX_QUANTITY=99;
+function requestClosed(day,menu,now,allowPast=false){
+ return !menu.accepting||(!allowPast&&(day.date<now.date||(day.date===now.date&&now.time>=menu.cutoffTime)));
+}
+function makeOrder(input,menu,now,allowPast=false){
+ if(!input||input.website||input.consent!==true)throw Error('Confirme a utilização do nome para tratar do pedido.');
+ if(input.schemaVersion!==3)throw Error('Atualize a página para usar a nova versão dos pedidos.');
  if(typeof input.id!=='string'||!/^[A-Za-z0-9-]{20,80}$/.test(input.id))throw Error('Referência inválida.');
  if(input.version!==menu.version)throw Error('A ementa mudou. Atualize a página antes de enviar.');
  if(!menu.accepting)throw Error('Os pedidos estão fechados.');
  const name=cleanText(input.name,80,true);if(name.length<2)throw Error('Indique o seu nome.');
  const note=cleanText(input.note||'',400);
  if(!Array.isArray(input.items)||!input.items.length||input.items.length>5)throw Error('Escolha pelo menos um dia.');
- const seen=new Set();let totalCents=0,unknownPrice=false;
+ const seen=new Set();
  const items=input.items.map(x=>{
   if(!x||seen.has(x.date)||typeof x.want!=='boolean')throw Error('Escolha de dia inválida.');seen.add(x.date);
-  const day=menu.days.find(d=>d.date===x.date);
-  if(!day||!day.available||!day.title)throw Error('Um dos dias já não está disponível.');
-  if(!allowPast&&(day.date<now.date||(day.date===now.date&&now.time>=menu.cutoffTime)))throw Error('Já passou a hora limite para um dos dias.');
-  if(!Number.isInteger(x.quantity)||x.quantity<(x.want?1:0)||x.quantity>(x.want?10:0))throw Error('Quantidade de almoços inválida.');
-  const dessertId=x.dessertId||'',dq=x.dessertQuantity??0;
-  if(!Number.isInteger(dq)||dq<0||dq>x.quantity)throw Error('Quantidade de sobremesas inválida.');
-  if((!x.want&&(dessertId||dq))||(!dessertId&&dq))throw Error('A sobremesa deve acompanhar um almoço.');
+  const day=menu.days.find(d=>d.date===x.date);if(!day)throw Error('Dia inválido.');
+  if(requestClosed(day,menu,now,allowPast))throw Error('Já passou a hora limite para um dos dias.');
+  if(x.want&&(!day.available||!day.title))throw Error('O almoço de um dos dias já não está disponível.');
+  if(!Number.isInteger(x.quantity)||(x.want?(x.quantity<1||x.quantity>MAX_QUANTITY):x.quantity!==0))throw Error('Quantidade de almoços inválida.');
+  const dessertId=x.dessertId??'',dq=x.dessertQuantity??0;
+  if(typeof dessertId!=='string'||!Number.isInteger(dq)||dq<0||dq>MAX_QUANTITY)throw Error('Quantidade de sobremesas inválida.');
+  if(!dessertId&&dq!==0)throw Error('Escolha a sobremesa para as doses indicadas.');
   let dessert=null;
   if(dessertId){
    const d=menu.desserts.find(d=>d.id===dessertId&&d.available);
-   if(!d||!d.title||dq<1||typeof d.price!=='number')throw Error('A sobremesa escolhida já não está disponível.');
-   dessert={id:d.id,title:d.title,quantity:dq,unitCents:cents(d.price),allergens:d.allergens.slice(),allergensReviewed:d.allergensReviewed,allergenNotes:d.allergenNotes||''};
-   totalCents+=dessert.unitCents*dq;
+   if(!d||!d.title||dq<1)throw Error('Escolha uma sobremesa disponível e indique as doses.');
+   dessert={id:d.id,title:d.title,quantity:dq,...validateAllergens(d)};
   }
-  if(x.want){if(typeof day.price==='number')totalCents+=cents(day.price)*x.quantity;else unknownPrice=true;}
-  return {date:day.date,title:day.title,want:x.want,quantity:x.quantity,unitCents:typeof day.price==='number'?cents(day.price):null,allergens:day.allergens.slice(),allergensReviewed:day.allergensReviewed,allergenNotes:day.allergenNotes||'',dessert};
+  return {date:day.date,title:day.title,want:x.want,quantity:x.quantity,...validateAllergens(day),dessert};
  });
- return {id:input.id,version:menu.version,weekStart:menu.weekStart,name,note,items,totalCents,unknownPrice};
+ return {schemaVersion:3,id:input.id,version:menu.version,weekStart:menu.weekStart,name,note,items};
+}
+function orderView(o){
+ const info=d=>({allergens:Array.isArray(d.allergens)?d.allergens.slice():[],allergensReviewed:d.allergensReviewed===true,allergenNotes:d.allergenNotes||''});
+ return {schemaVersion:3,id:o.id,version:o.version,weekStart:o.weekStart,name:o.name,note:o.note||'',createdAt:o.createdAt,emailStatus:o.emailStatus,
+  items:(o.items||[]).map(x=>({date:x.date,title:x.title||'',want:x.want===true,quantity:x.want?x.quantity:0,...info(x),
+   dessert:x.dessert?{id:x.dessert.id,title:x.dessert.title,quantity:x.dessert.quantity,...info(x.dessert)}:null}))};
 }
 
-export {ALLERGENS,validateMenuV2,makeOrderV2};
+export {ALLERGENS,MAX_QUANTITY,validateMenu,makeOrder,orderView};

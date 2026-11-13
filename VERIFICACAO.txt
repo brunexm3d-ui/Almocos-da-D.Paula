@@ -1,47 +1,54 @@
-VERIFICAÇÃO — 12/11/2026
+VERIFICAÇÃO DA VERSÃO 3 — 13/11/2026
 
-32 verificações de regras de pedidos e ementas, mais 10 de acesso e email com serviços simulados.
-Não houve execução no Cloudflare nem teste visual num navegador.
+49 verificações de regras, seleção, resumos, password e acesso. Serviços externos simulados.
+Verificação de sintaxe concluída. Sem teste visual, publicação ou email real.
 
-PASSOU — Five lunches and exactly two desserts
-PASSOU — Meal + dessert totals in integer cents
-PASSOU — No dessert selected
-PASSOU — Both dessert prices respected
-PASSOU — No contact stored; observations preserved
-PASSOU — Client cannot override dessert price
-PASSOU — Allergen snapshots survive later menu edits
-PASSOU — Stale menu rejected
-PASSOU — No consent rejected
-PASSOU — Honeypot rejected
-PASSOU — No name rejected
-PASSOU — Unknown day rejected
-PASSOU — Duplicate day rejected
-PASSOU — Zero meals rejected
-PASSOU — Eleven meals rejected
-PASSOU — Fractional meals rejected
-PASSOU — Dessert without lunch rejected
-PASSOU — Too many desserts rejected
-PASSOU — Fractional dessert rejected
+PASSOU — Dessert only: three portions and no lunch
+PASSOU — Dessert quantity can exceed lunch quantity
+PASSOU — Dessert on a day without lunch
+PASSOU — Lunch only remains available
+PASSOU — Explicit decline remains accepted
+PASSOU — Both desserts may be selected on different days
+PASSOU — Name and observations retained without contact or values
+PASSOU — Old menu amounts removed on load
+PASSOU — Legacy order values removed from admin projection
+PASSOU — Allergen snapshots are independent
+PASSOU — Zero dessert quantity rejected
+PASSOU — Negative dessert quantity rejected
+PASSOU — Fractional dessert quantity rejected
+PASSOU — Excessive dessert quantity rejected
 PASSOU — Unknown dessert rejected
-PASSOU — Dessert quantity without choice rejected
-PASSOU — Closed orders rejected
-PASSOU — Inactive dessert rejected
-PASSOU — Same-day cutoff rejected
-PASSOU — No lunch response accepted
-PASSOU — Unknown lunch price marked
-PASSOU — 14 selectable categories
-PASSOU — Unknown allergen rejected
-PASSOU — Missing active dessert price rejected
-PASSOU — Negative price rejected
-PASSOU — Non-Monday start rejected
-PASSOU — Invalid image rejected
-PASSOU — No admin token
-PASSOU — Malformed admin token
-PASSOU — Expired session
-PASSOU — Unknown session
-PASSOU — Private orders protected
-PASSOU — Menu publishing protected
-PASSOU — Email retry protected
-PASSOU — Valid session accepted
-PASSOU — Production kitchen starts closed
-PASSOU — Email includes dessert and observations
+PASSOU — Doses without dessert choice rejected
+PASSOU — Lunch quantity without wanting lunch rejected
+PASSOU — Zero lunch quantity rejected
+PASSOU — Duplicate day rejected
+PASSOU — Missing consent rejected
+PASSOU — Empty name rejected
+PASSOU — Stale menu rejected
+PASSOU — Old page version rejected
+PASSOU — Honeypot rejected
+PASSOU — Unavailable dessert rejected
+PASSOU — Unavailable lunch rejected while dessert remains possible
+PASSOU — Dessert respects cutoff
+PASSOU — Closed menu rejects dessert only
+PASSOU — Empty dessert choice and doses can be omitted
+PASSOU — Selection includes dessert without answering lunch
+PASSOU — Changing lunch to no retains dessert
+PASSOU — Unselected days are not sent
+PASSOU — Dessert selector visible before selecting lunch
+PASSOU — Dessert input available without lunch
+PASSOU — Card has dessert when no meal is available
+PASSOU — Summary has independent portions and no monetary values
+PASSOU — Password toggle preserves characters and returns to hidden
+PASSOU — New kitchen code accepted
+PASSOU — Old kitchen code rejected
+PASSOU — Demo order stores dessert only
+PASSOU — Duplicate demo request is not duplicated
+PASSOU — Email confirms dessert only with portions and no money
+PASSOU — Private orders requires authentication
+PASSOU — Menu publication requires authentication
+PASSOU — Email retry requires authentication
+PASSOU — Server starts with no values and orders closed
+PASSOU — Password rotation invalidates old server session
+PASSOU — New server session accepted
+PASSOU — Existing demo menu and answers retained during update

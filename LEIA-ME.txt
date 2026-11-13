@@ -1,0 +1,112 @@
+A MESA — ORGANIZADOR DE EMENTAS
+Versão 3 — 13 de novembro de 2026
+================================
+
+NESTA VERSÃO
+- É possível pedir só sobremesa, só almoço ou ambos.
+- As doses de sobremesa são independentes das doses de almoço.
+- Escolhe-se uma das duas sobremesas da semana por dia e indicam-se as doses.
+- Os campos aceitam 1 a 99 doses de cada alimento.
+- O código da cozinha foi atualizado na demonstração para o novo código
+  indicado na conversa. O botão Mostrar/Ocultar permite conferir a escrita.
+- Não há preços, moeda ou totais monetários na ementa, no painel ou nos emails.
+- Mantêm-se os alergénios, o nome e as observações. Não é pedido contacto.
+- Logótipo e fundo ficam para uma próxima alteração.
+
+EXPERIMENTAR
+Abra index.html no navegador.
+A faixa "Demonstração" identifica o modo local. Nenhum email é enviado.
+Os dados desta prévia ficam na sessão do navegador, sem partilha entre pessoas.
+A versão tenta recuperar os testes guardados na versão 2, no mesmo navegador
+e na mesma origem, incluindo a ementa e os pedidos, sem os antigos valores.
+Use o novo código indicado na conversa para entrar na cozinha.
+O bloqueio local é só para demonstrar o painel. A proteção dos dados reais
+é feita pelo servidor descrito abaixo.
+
+ATUALIZAR UMA INSTALAÇÃO EXISTENTE
+1. Guarde uma cópia dos ficheiros anteriores.
+2. Se API_URL já estava preenchido no seu index.html, conserve esse endereço
+   no novo ficheiro.
+3. Substitua o index.html no GitHub.
+4. Se já ativou a API, atualize também worker.mjs e validation.mjs na pasta
+   servidor. Preserve o wrangler.toml com o seu database_id e ALLOWED_ORIGIN.
+5. Atualize o código do servidor, na pasta servidor:
+     npx wrangler secret put ADMIN_CODE
+   Quando lhe for pedido o valor, introduza o novo código indicado na conversa.
+   Não escreva o código no index.html ou no repositório público.
+6. Publique a API atualizada:
+     npx wrangler deploy
+
+A alteração do ficheiro HTML não altera um segredo já configurado no servidor.
+A nova versão da API associa as sessões ao código atual; após a atualização
+e a troca do código, volte a entrar na cozinha.
+As tabelas SQL não mudam. Não elimine a base de dados.
+Os pedidos anteriores continuam no painel, sem apresentar valores.
+A nova página verifica a versão da API para evitar enviar pedidos de sobremesa
+independente para um servidor que ainda só aceite sobremesa com almoço.
+
+CONFIGURAR O SERVIDOR PELA PRIMEIRA VEZ
+O GitHub Pages apresenta a página. A API incluída corre num Cloudflare Worker
+e guarda a ementa e os pedidos numa base D1.
+Este pacote não cria contas nem ativa serviços automaticamente.
+Requisitos: conta Cloudflare e Node.js com npm.
+
+Na pasta servidor:
+  npx wrangler login
+  npx wrangler d1 create a-mesa
+
+Copie o database_id devolvido para wrangler.toml.
+Em ALLOWED_ORIGIN coloque a origem exata do seu GitHub, por exemplo:
+  https://seunome.github.io
+Não inclua o nome do repositório ou uma barra final nesta variável.
+
+Crie as tabelas:
+  npx wrangler d1 execute a-mesa --remote --file=schema.sql
+
+Configure o código, introduzindo o novo valor indicado na conversa:
+  npx wrangler secret put ADMIN_CODE
+
+Publique a API:
+  npx wrangler deploy
+
+No index.html, altere:
+  const API_URL = '';
+para o endereço HTTPS do seu Worker:
+  const API_URL = 'https://o-seu-worker.workers.dev';
+
+Volte a carregar o index.html no GitHub.
+A cozinha real começa sem pratos publicados e com os pedidos fechados.
+Entre, escolha a semana, preencha os pratos, carregue as fotografias,
+defina as duas sobremesas e os alergénios, assinale "Aceitar pedidos"
+e publique a ementa. Não há campos de preço.
+
+AVISOS POR EMAIL
+No Resend, configure um remetente/domínio autorizado.
+Na pasta servidor, guarde os três valores como segredos:
+  npx wrangler secret put RESEND_API_KEY
+  npx wrangler secret put EMAIL_FROM
+  npx wrangler secret put ORDERS_EMAIL
+
+EMAIL_FROM: remetente autorizado.
+ORDERS_EMAIL: endereço da pessoa que recebe os pedidos na cozinha.
+O email inclui o nome, os dias, as doses de almoço e de sobremesa e as
+observações. Também é enviado para pedidos só de sobremesa. Não inclui preços.
+
+Sem estes valores, os pedidos ficam guardados no painel com aviso de
+email não configurado. Se o envio falhar, o aviso fica pendente.
+É possível repetir o aviso pelo painel nas primeiras 23 horas.
+O pedido é guardado antes do envio, e repetir o mesmo pedido não duplica
+o registo. Confirme um pedido de teste e a receção do email antes de divulgar.
+
+ALERGÉNIOS
+A cozinha deve rever as receitas, os ingredientes e os rótulos dos fornecedores.
+Marque as categorias aplicáveis e acrescente detalhes quando necessário.
+Assinale "Informação revista pela cozinha" após essa revisão.
+Quando não há revisão, o público vê a indicação de informação por confirmar.
+Nenhuma opção assinalada não equivale a uma garantia de ausência de alergénios.
+
+VERIFICAÇÃO
+As regras, os resumos, o botão de password e os caminhos de autenticação foram
+verificados em JavaScript, com serviços simulados quando necessário.
+Não foi possível testar visualmente num navegador, publicar o servidor ou
+enviar um email real nesta sessão. Consulte VERIFICACAO.txt.
