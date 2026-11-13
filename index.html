@@ -27,10 +27,28 @@
 .selection-list li>span{width:100%}
 @media(max-width:520px){.portions input,.password-field input{font-size:16px}.password-field{gap:6px}}
 
+
+/* Contagens diárias lado a lado, com o mesmo destaque. */
+.stat-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:14px}
+.day-stat{padding:16px 14px}
+.day-stat .stat-day{font-family:inherit;font-size:.91rem;font-weight:700;margin:0;color:var(--ink)}
+.day-stat .stat-date{font-size:.72rem;color:var(--muted);margin:4px 0 18px}
+.day-counts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:10px}
+.stat-count{text-align:center;min-width:0}
+.stat-count+.stat-count{border-left:1px solid var(--line);padding-left:10px}
+.day-stat .stat-number{font-family:inherit;font-size:2.5rem;line-height:1;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.03em;margin:0 0 10px}
+.day-stat .stat-number-compact{font-size:1.7rem}
+.day-stat .stat-number-small{font-size:1.35rem}
+.day-stat .stat-label{display:block;font-size:.73rem;font-weight:700;line-height:1.3}
+.day-stat .count-lunch .stat-number,.day-stat .count-lunch .stat-label{color:#23614b}
+.day-stat .count-dessert .stat-number,.day-stat .count-dessert .stat-label{color:#7b3fa0}
+.dessert-breakdown .fine{font-size:.84rem;line-height:1.65}
+.dessert-breakdown .dessert-dose{color:#7b3fa0}
+
 </style>
 </head>
 <body>
-<div id="demoBanner" class="demo-bar" hidden><strong>Demonstração</strong> · Ementa de exemplo. Os testes ficam neste dispositivo; nenhum pedido ou email é enviado.</div>
+<div id="demoBanner" class="demo-bar" hidden><strong>Demonstração</strong> · Ementa de exemplo. Os testes ficam apenas nesta sessão do navegador.</div>
 <header><div class="wrap nav"><a href="#ementa" class="brand" id="brandLink"><span class="brand-icon" aria-hidden="true">♧</span><div><span class="brand-name">à mesa</span><small>almoços da semana</small></div></a><nav class="tabs" aria-label="Navegação principal"><button type="button" id="publicTab" class="active">Ementa</button><button type="button" id="adminTab">A cozinha ↗</button></nav></div></header>
 <main class="wrap" id="app"><div class="loading"><span class="loading-spinner" aria-hidden="true"></span><p>A preparar a ementa…</p></div></main>
 <footer><div class="wrap footer-content"><span>à mesa.</span><span>A ementa da equipa. Almoço, sobremesa ou ambos.</span><span id="footerMode">Almoços da semana</span></div></footer>
@@ -40,7 +58,7 @@
 // URL HTTPS do servidor, depois de o ativar. Vazio mantém a demonstração local.
 const API_URL = '';
 const LIVE = /^https:\/\//.test(API_URL);
-const DEMO_KEY = 'a-mesa-demo-v3';
+const DEMO_KEY = 'a-mesa-demo-v4';
 const $ = (s,root=document)=>root.querySelector(s);
 const $$ = (s,root=document)=>[...root.querySelectorAll(s)];
 const esc = s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -108,7 +126,7 @@ function validateMenu(input,allowDemoImages=false){
   if(!d||d.id!==['dessert-a','dessert-b'][i]||typeof d.available!=='boolean')throw Error('Sobremesa inválida.');
   return {id:d.id,title:cleanText(d.title||'',80,d.available),available:d.available,...validateAllergens(d)};
  });
- return {schemaVersion:3,version:input.version,weekStart:input.weekStart,title:cleanText(input.title,70,true),intro:cleanText(input.intro||'',240),notice:cleanText(input.notice||'',300),cutoffTime:input.cutoffTime,accepting:input.accepting,days,desserts};
+ return {schemaVersion:4,version:input.version,weekStart:input.weekStart,title:cleanText(input.title,70,true),intro:cleanText(input.intro||'',240),notice:cleanText(input.notice||'',300),cutoffTime:input.cutoffTime,accepting:input.accepting,days,desserts};
 }
 
 const MAX_QUANTITY=99;
@@ -117,7 +135,7 @@ function requestClosed(day,menu,now,allowPast=false){
 }
 function makeOrder(input,menu,now,allowPast=false){
  if(!input||input.website||input.consent!==true)throw Error('Confirme a utilização do nome para tratar do pedido.');
- if(input.schemaVersion!==3)throw Error('Atualize a página para usar a nova versão dos pedidos.');
+ if(input.schemaVersion!==4)throw Error('Atualize a página para usar a nova versão dos pedidos.');
  if(typeof input.id!=='string'||!/^[A-Za-z0-9-]{20,80}$/.test(input.id))throw Error('Referência inválida.');
  if(input.version!==menu.version)throw Error('A ementa mudou. Atualize a página antes de enviar.');
  if(!menu.accepting)throw Error('Os pedidos estão fechados.');
@@ -142,11 +160,11 @@ function makeOrder(input,menu,now,allowPast=false){
   }
   return {date:day.date,title:day.title,want:x.want,quantity:x.quantity,...validateAllergens(day),dessert};
  });
- return {schemaVersion:3,id:input.id,version:menu.version,weekStart:menu.weekStart,name,note,items};
+ return {schemaVersion:4,id:input.id,version:menu.version,weekStart:menu.weekStart,name,note,items};
 }
 function orderView(o){
  const info=d=>({allergens:Array.isArray(d.allergens)?d.allergens.slice():[],allergensReviewed:d.allergensReviewed===true,allergenNotes:d.allergenNotes||''});
- return {schemaVersion:3,id:o.id,version:o.version,weekStart:o.weekStart,name:o.name,note:o.note||'',createdAt:o.createdAt,emailStatus:o.emailStatus,
+ return {schemaVersion:4,id:o.id,version:o.version,weekStart:o.weekStart,name:o.name,note:o.note||'',createdAt:o.createdAt,
   items:(o.items||[]).map(x=>({date:x.date,title:x.title||'',want:x.want===true,quantity:x.want?x.quantity:0,...info(x),
    dessert:x.dessert?{id:x.dessert.id,title:x.dessert.title,quantity:x.dessert.quantity,...info(x.dessert)}:null}))};
 }
@@ -179,15 +197,14 @@ function collectAllergens(el){return {allergens:$$('[data-allergen]:checked',el)
 
 async function call(method,...args){
  if(!LIVE)return demoCall(method,...args);
- const endpoint={getPublicMenu:['GET','menu'],adminLogin:['POST','login'],adminLogout:['POST','logout'],getAdminData:['GET','admin'],publishMenu:['PUT','menu'],submitOrder:['POST','orders'],retryEmail:['POST','email/retry']}[method];
+ const endpoint={getPublicMenu:['GET','menu'],adminLogin:['POST','login'],adminLogout:['POST','logout'],getAdminData:['GET','admin'],publishMenu:['PUT','menu'],submitOrder:['POST','orders']}[method];
  if(!endpoint)throw Error('Operação inválida.');
  const headers={'Accept':'application/json'};
- if(['adminLogout','getAdminData','publishMenu','retryEmail'].includes(method))headers.Authorization='Bearer '+args[0];
+ if(['adminLogout','getAdminData','publishMenu'].includes(method))headers.Authorization='Bearer '+args[0];
  let body;
  if(method==='adminLogin')body={code:args[0]};
  if(method==='publishMenu')body=args[1];
  if(method==='submitOrder')body=args[0];
- if(method==='retryEmail')body={id:args[1]};
  if(body)headers['Content-Type']='application/json';
  const response=await fetch(API_URL.replace(/\/$/,'')+'/api/'+endpoint[1],{method:endpoint[0],headers,body:body?JSON.stringify(body):undefined,cache:'no-store'});
  const result=await response.json();
@@ -203,12 +220,12 @@ const customer={name:'',note:''};
 function initialDemo(){
  const start=monday(),info={allergens:[],allergensReviewed:false,allergenNotes:''};
  const meals=[['Frango assado no forno','Com arroz e legumes salteados.'],['Filetes de peixe','Com arroz de tomate e salada.'],['Massa à bolonhesa','Molho de tomate e queijo ralado.'],['Bacalhau com natas','Gratinado no forno, com salada.'],['Arroz de legumes','Com grão, cenoura e ervas aromáticas.']];
- return {menu:{schemaVersion:3,version:1,weekStart:start,title:'A ementa desta semana',intro:'Organize os almoços da semana. Pode pedir almoço, sobremesa ou ambos.',notice:'Consulte a cozinha sobre ingredientes e alergénios antes de pedir.',cutoffTime:'10:00',accepting:true,
+ return {menu:{schemaVersion:4,version:1,weekStart:start,title:'A ementa desta semana',intro:'Organize os almoços da semana. Pode pedir almoço, sobremesa ou ambos.',notice:'Consulte a cozinha sobre ingredientes e alergénios antes de pedir.',cutoffTime:'10:00',accepting:true,
   days:meals.map((m,i)=>({date:addDays(start,i),title:m[0],description:m[1],image:plate(i),available:true,...info})),
   desserts:[{id:'dessert-a',title:'Mousse de chocolate',available:true,...info},{id:'dessert-b',title:'Arroz doce',available:true,...info}]},orders:[]};
 }
 function loadDemo(){
- for(const key of [DEMO_KEY,'a-mesa-demo-v2']){
+ for(const key of [DEMO_KEY,'a-mesa-demo-v3','a-mesa-demo-v2']){
   try{
    const d=JSON.parse(sessionStorage.getItem(key));
    if(d?.menu?.days?.length===5&&Array.isArray(d.orders)){
@@ -221,7 +238,7 @@ function loadDemo(){
 let demo=loadDemo();
 function persistDemo(next){try{sessionStorage.setItem(DEMO_KEY,JSON.stringify(next));demo=next;}catch{throw Error('Não foi possível guardar a demonstração neste navegador. Verifique o espaço disponível.');}}
 function menuFromServer(data){
- if(LIVE&&data?.schemaVersion!==3)throw Error('Atualize também os ficheiros do servidor para usar os pedidos independentes de sobremesa.');
+ if(LIVE&&data?.schemaVersion!==4)throw Error('Atualize os ficheiros do servidor para a versão que guarda os pedidos apenas no painel da cozinha.');
  return validateMenu(data,!LIVE);
 }
 async function demoCall(method,...args){
@@ -240,10 +257,10 @@ async function demoCall(method,...args){
  }
  if(method==='submitOrder'){
   const p=args[0],digest=sha256Text(JSON.stringify(p)),old=demo.orders.find(o=>o.id===p.id);
-  if(old){if(old.digest!==digest)throw Error('Esta referência já foi usada.');return {id:old.id,emailStatus:'demo'};}
+  if(old){if(old.digest!==digest)throw Error('Esta referência já foi usada.');return {id:old.id};}
   const order=makeOrder(p,demo.menu,localDateTime(),true);
-  persistDemo({...demo,orders:[{...order,createdAt:new Date().toISOString(),emailStatus:'demo',digest},...demo.orders]});
-  return {id:order.id,emailStatus:'demo'};
+  persistDemo({...demo,orders:[{...order,createdAt:new Date().toISOString(),digest},...demo.orders]});
+  return {id:order.id};
  }
  throw Error('Operação indisponível.');
 }
@@ -269,7 +286,7 @@ function renderPublic(){
  '<form id="orderForm"><div class="fields"><label>O seu nome<input id="customerName" name="name" autocomplete="name" required minlength="2" maxlength="80" placeholder="Como se chama?" value="'+esc(customer.name)+'"></label>'+
  '<label>Observações <span class="micro">(opcional)</span><textarea id="customerNote" name="note" maxlength="400" placeholder="Alguma indicação para a cozinha?">'+esc(customer.note)+'</textarea></label>'+
  '<label class="trap" aria-hidden="true">Empresa<input name="website" tabindex="-1" autocomplete="off"></label><label class="check-label"><input id="consent" type="checkbox" required><span>Autorizo o uso do meu nome e das observações para tratar deste pedido.</span></label></div>'+
- '<button class="primary wide submit" id="submitOrder" type="submit" disabled>'+(LIVE?'Enviar pedido →':'Experimentar pedido →')+'</button><p class="fine">'+(LIVE?'O pedido fica registado para a cozinha.':'Demonstração: nenhum pedido ou email é enviado.')+'</p><p id="orderFeedback" role="alert" hidden></p></form></aside></div>';
+ '<button class="primary wide submit" id="submitOrder" type="submit" disabled>'+(LIVE?'Enviar pedido →':'Experimentar pedido →')+'</button><p class="fine">'+(LIVE?'O pedido fica registado para a cozinha.':'Demonstração: os testes ficam guardados apenas nesta sessão.')+'</p><p id="orderFeedback" role="alert" hidden></p></form></aside></div>';
  renderCards();renderSelection();$('#orderForm').onsubmit=sendOrder;
  for(const [id,key] of [['customerName','name'],['customerNote','note']])$('#'+id).oninput=e=>{customer[key]=e.target.value;requestId=uuid();};
 }
@@ -322,14 +339,14 @@ function renderSelection(){
 }
 async function sendOrder(event){
  event.preventDefault();if(sending)return;const form=event.currentTarget;
- const payload={schemaVersion:3,id:requestId,version:menu.version,name:$('#customerName').value.trim(),note:$('#customerNote').value.trim(),website:form.elements.website.value,consent:$('#consent').checked,items:selectedItems()};
+ const payload={schemaVersion:4,id:requestId,version:menu.version,name:$('#customerName').value.trim(),note:$('#customerNote').value.trim(),website:form.elements.website.value,consent:$('#consent').checked,items:selectedItems()};
  try{makeOrder(payload,menu,localDateTime(),!LIVE);}catch(e){feedback($('#orderFeedback'),e.message);return;}
  sending=true;setBusy(true);$('#submitOrder').disabled=true;$('#submitOrder').textContent='A registar…';
  try{
   const result=await call('submitOrder',payload);
-  $('#summary').innerHTML='<div class="success-card" role="status"><div class="success-icon">✓</div><h3>'+(LIVE?'Pedido registado.':'Simulação concluída.')+'</h3><p>'+
-   (LIVE?'As suas escolhas de almoço e sobremesa ficaram guardadas para a cozinha.':'Veja o teste em A cozinha → Pedidos. Nenhum email foi enviado.')+'</p><p class="order-code">Ref. '+esc(result.id.slice(0,8).toUpperCase())+'</p>'+
-   (result.emailStatus==='pending'?'<p>O aviso por email está pendente. Não precisa de repetir o pedido.</p>':'')+'</div><button class="wide" id="anotherOrder" type="button" style="margin-top:18px">Voltar à ementa</button>';
+  $('#summary').innerHTML='<div class="success-card" role="status"><div class="success-icon">✓</div><h3>'+(LIVE?'Pedido guardado.':'Simulação guardada.')+'</h3><p>'+
+   (LIVE?'As suas escolhas estão disponíveis no painel da cozinha.':'Veja o teste em A cozinha → Pedidos.')+'</p><p class="order-code">Ref. '+esc(result.id.slice(0,8).toUpperCase())+'</p></div>'+
+   '<button class="wide" id="anotherOrder" type="button" style="margin-top:18px">Voltar à ementa</button>';
   choices={};requestId=uuid();$('#anotherOrder').onclick=renderPublic;$('#summary').scrollIntoView({behavior:'smooth',block:'center'});
  }catch(e){feedback($('#orderFeedback'),e.message);$('#submitOrder').textContent=LIVE?'Enviar pedido →':'Experimentar pedido →';}
  finally{sending=false;setBusy(false);renderCards();renderSelection();}
@@ -386,7 +403,7 @@ function renderEditor(){
 }
 async function publish(event){
  event.preventDefault();if(uploading)return;const form=event.currentTarget,start=form.elements.weekStart.value;
- const input={schemaVersion:3,version:selectedRevision,weekStart:start,title:form.elements.title.value.trim(),intro:form.elements.intro.value.trim(),notice:form.elements.notice.value.trim(),cutoffTime:form.elements.cutoffTime.value,accepting:form.elements.accepting.checked,
+ const input={schemaVersion:4,version:selectedRevision,weekStart:start,title:form.elements.title.value.trim(),intro:form.elements.intro.value.trim(),notice:form.elements.notice.value.trim(),cutoffTime:form.elements.cutoffTime.value,accepting:form.elements.accepting.checked,
   days:$$('.edit-day').map((el,i)=>({date:addDays(start,i),title:$('[data-field="title"]',el).value.trim(),description:$('[data-field="description"]',el).value.trim(),available:$('[data-field="available"]',el).checked,image:draft.days[i].image||'',...collectAllergens(el)})),
   desserts:$$('.dessert-editor').map((el,i)=>({id:['dessert-a','dessert-b'][i],title:$('[data-dessert-name]',el).value.trim(),available:$('[data-dessert-available]',el).checked,...collectAllergens(el)}))};
  let next;try{next=validateMenu(input,!LIVE);}catch(e){feedback($('#publishFeedback'),e.message);return;}
@@ -394,28 +411,40 @@ async function publish(event){
  try{menu=menuFromServer(await call('publishMenu',token,next));choices={};requestId=uuid();notify(LIVE?'Ementa e sobremesas publicadas.':'Demonstração atualizada.');renderPublic();window.scrollTo({top:0,behavior:'smooth'});}
  catch(e){feedback($('#publishFeedback'),e.message);button.disabled=false;button.textContent='Publicar ementa →';}
 }
+function dailyCounts(rows,days){
+ const counts=new Map(days.map(day=>[day.date,{date:day.date,lunches:0,desserts:0,types:new Map()}]));
+ for(const order of rows)for(const item of order.items||[]){
+  const day=counts.get(item.date);if(!day)continue;
+  if(item.want&&Number.isSafeInteger(item.quantity)&&item.quantity>0)day.lunches+=item.quantity;
+  const dessert=item.dessert;
+  if(dessert&&Number.isSafeInteger(dessert.quantity)&&dessert.quantity>0){
+   day.desserts+=dessert.quantity;
+   day.types.set(dessert.title,(day.types.get(dessert.title)||0)+dessert.quantity);
+  }
+ }
+ return [...counts.values()];
+}
+function countMarkup(number,label,kind){
+ const size=number>=10000?' stat-number-small':number>=1000?' stat-number-compact':'';
+ return '<div class="stat-count count-'+kind+'"><strong class="stat-number'+size+'">'+number+'</strong><span class="stat-label">'+label+'</span></div>';
+}
 function renderOrders(orders){
- const rows=orders.filter(o=>o.weekStart===draft.weekStart).map(orderView);
+ const rows=orders.filter(o=>o.weekStart===draft.weekStart).map(orderView),totals=dailyCounts(rows,draft.days);
  $('#adminContent').innerHTML='<p class="fine" style="margin-bottom:18px">Semana de '+fmtDate(draft.weekStart,{day:'numeric',month:'long'})+' · '+rows.length+' respostas'+(!LIVE?' de teste':'')+'</p>'+
-  '<div class="stat-grid">'+draft.days.map((d,i)=>'<div class="stat"><span>'+dates[i].split('-')[0]+'</span><strong>'+rows.reduce((n,o)=>n+o.items.filter(x=>x.date===d.date&&x.want).reduce((s,x)=>s+x.quantity,0),0)+'</strong><small>almoços · '+
-   rows.reduce((n,o)=>n+o.items.filter(x=>x.date===d.date).reduce((s,x)=>s+(x.dessert?.quantity||0),0),0)+' sobremesas</small></div>').join('')+'</div>'+
-  '<div class="panel"><h3>Sobremesas por preparar</h3>'+draft.days.map(d=>{
-   const counts=new Map();for(const o of rows)for(const x of o.items)if(x.date===d.date&&x.dessert)counts.set(x.dessert.title,(counts.get(x.dessert.title)||0)+x.dessert.quantity);
-   return '<p class="fine"><strong>'+esc(fmtDate(d.date,{weekday:'long'}))+'</strong> · '+(counts.size?[...counts].map(([name,n])=>n+' × '+esc(name)).join(' · '):'Sem sobremesas pedidas')+'</p>';
-  }).join('')+'</div>'+
+  '<div class="stat-grid">'+totals.map((day,i)=>
+   '<section class="stat day-stat" aria-labelledby="count-day-'+i+'"><h3 id="count-day-'+i+'" class="stat-day">'+esc(dates[i].split('-')[0])+'</h3><p class="stat-date">'+fmtDate(day.date,{day:'2-digit',month:'2-digit'})+'</p>'+
+   '<div class="day-counts">'+countMarkup(day.lunches,'Almoços','lunch')+countMarkup(day.desserts,'Sobremesas','dessert')+'</div></section>'
+  ).join('')+'</div>'+
+  '<div class="panel dessert-breakdown"><h3>Sobremesas por preparar</h3>'+totals.map(day=>
+   '<p class="fine"><strong>'+esc(fmtDate(day.date,{weekday:'long'}))+'</strong> · '+
+   (day.types.size?[...day.types].map(([name,n])=>'<strong class="dessert-dose">'+n+'</strong> × '+esc(name)).join(' · '):'Sem sobremesas pedidas')+'</p>'
+  ).join('')+'</div>'+
   '<div class="panel">'+(rows.length?rows.map(o=>'<article class="order" data-order="'+esc(o.id)+'"><div class="order-top"><strong>'+esc(o.name)+'</strong><span class="micro">'+new Date(o.createdAt).toLocaleString('pt-PT',{timeZone:'Europe/Lisbon',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</span></div>'+
    '<p>Ref. '+esc(o.id.slice(0,8).toUpperCase())+'</p><ul>'+o.items.map(x=>'<li>'+esc(fmtDate(x.date,{weekday:'long'}))+': '+(x.want?x.quantity+' × '+esc(x.title):'sem almoço')+
    (x.dessert?'<br><strong>Sobremesa: '+x.dessert.quantity+' × '+esc(x.dessert.title)+'</strong>':' · sem sobremesa')+'</li>').join('')+'</ul>'+
-   (o.note?'<p><strong>Observações:</strong> '+esc(o.note)+'</p>':'')+
-   (LIVE&&o.emailStatus!=='sent'&&Date.now()-Date.parse(o.createdAt)<23*3600*1000?'<button type="button" data-retry-email>Repetir aviso por email</button>':'')+
-   '<p class="micro">'+(o.emailStatus==='demo'?'Demonstração — nenhum email enviado':o.emailStatus==='sent'?'Aviso por email enviado':o.emailStatus==='disabled'?'Avisos por email ainda não configurados':'Aviso por email pendente; o pedido está guardado')+'</p></article>').join(''):'<div class="empty">Ainda não há pedidos para esta semana.</div>')+
-  '</div><div class="admin-actions"><p class="fine">As contagens incluem os pedidos só de sobremesa.</p><button type="button" id="refreshOrders">Atualizar pedidos</button></div>';
+   (o.note?'<p><strong>Observações:</strong> '+esc(o.note)+'</p>':'')+'</article>').join(''):'<div class="empty">Ainda não há pedidos para esta semana.</div>')+
+  '</div><div class="admin-actions"><p class="fine">Todos os pedidos ficam neste painel. As sobremesas incluem os pedidos sem almoço.</p><button type="button" id="refreshOrders">Atualizar pedidos</button></div>';
  $('#refreshOrders').onclick=renderAdmin;
- $$('[data-retry-email]').forEach(button=>button.onclick=async()=>{
-  button.disabled=true;
-  try{const result=await call('retryEmail',token,button.closest('[data-order]').dataset.order);notify(result.emailStatus==='sent'?'Aviso por email enviado.':'O email continua pendente. O pedido está guardado.');await renderAdmin();}
-  catch(e){notify(e.message);button.disabled=false;}
- });
 }
 async function refreshPublic(){
  try{const next=menuFromServer(await call('getPublicMenu'));if(!menu||next.version!==menu.version){choices={};requestId=uuid();}menu=next;renderPublic();}
@@ -423,7 +452,7 @@ async function refreshPublic(){
 }
 async function init(){
  $('#demoBanner').hidden=LIVE;$('#footerMode').textContent=LIVE?'A semana da equipa, organizada.':'Prévia · dados apenas nesta sessão';
- if(!LIVE)$('#demoBanner').innerHTML='<strong>Demonstração</strong> · Dados apenas nesta sessão do navegador. Nenhum pedido ou email é enviado.';
+ if(!LIVE)$('#demoBanner').innerHTML='<strong>Demonstração</strong> · Dados apenas nesta sessão do navegador. Consulte os testes em A cozinha → Pedidos.';
  try{menu=menuFromServer(await call('getPublicMenu'));renderPublic();}
  catch(e){$('#app').innerHTML='<div class="login panel"><h2>Já voltamos à mesa.</h2><p>'+esc(e.message)+'</p><button id="retry" type="button">Tentar novamente</button></div>';$('#retry').onclick=init;}
 }

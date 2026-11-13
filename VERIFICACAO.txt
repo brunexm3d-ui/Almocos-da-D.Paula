@@ -1,54 +1,23 @@
-VERIFICAÇÃO DA VERSÃO 3 — 13/11/2026
+VERIFICAÇÃO DA VERSÃO 4 — 13/11/2026
 
-49 verificações de regras, seleção, resumos, password e acesso. Serviços externos simulados.
-Verificação de sintaxe concluída. Sem teste visual, publicação ou email real.
+18 verificações passaram. Testes em JavaScript e serviços simulados.
+Não houve teste visual num navegador nem publicação no servidor.
 
-PASSOU — Dessert only: three portions and no lunch
-PASSOU — Dessert quantity can exceed lunch quantity
-PASSOU — Dessert on a day without lunch
-PASSOU — Lunch only remains available
-PASSOU — Explicit decline remains accepted
-PASSOU — Both desserts may be selected on different days
-PASSOU — Name and observations retained without contact or values
-PASSOU — Old menu amounts removed on load
-PASSOU — Legacy order values removed from admin projection
-PASSOU — Allergen snapshots are independent
-PASSOU — Zero dessert quantity rejected
-PASSOU — Negative dessert quantity rejected
-PASSOU — Fractional dessert quantity rejected
-PASSOU — Excessive dessert quantity rejected
-PASSOU — Unknown dessert rejected
-PASSOU — Doses without dessert choice rejected
-PASSOU — Lunch quantity without wanting lunch rejected
-PASSOU — Zero lunch quantity rejected
-PASSOU — Duplicate day rejected
-PASSOU — Missing consent rejected
-PASSOU — Empty name rejected
-PASSOU — Stale menu rejected
-PASSOU — Old page version rejected
-PASSOU — Honeypot rejected
-PASSOU — Unavailable dessert rejected
-PASSOU — Unavailable lunch rejected while dessert remains possible
-PASSOU — Dessert respects cutoff
-PASSOU — Closed menu rejects dessert only
-PASSOU — Empty dessert choice and doses can be omitted
-PASSOU — Selection includes dessert without answering lunch
-PASSOU — Changing lunch to no retains dessert
-PASSOU — Unselected days are not sent
-PASSOU — Dessert selector visible before selecting lunch
-PASSOU — Dessert input available without lunch
-PASSOU — Card has dessert when no meal is available
-PASSOU — Summary has independent portions and no monetary values
-PASSOU — Password toggle preserves characters and returns to hidden
-PASSOU — New kitchen code accepted
-PASSOU — Old kitchen code rejected
-PASSOU — Demo order stores dessert only
-PASSOU — Duplicate demo request is not duplicated
-PASSOU — Email confirms dessert only with portions and no money
-PASSOU — Private orders requires authentication
-PASSOU — Menu publication requires authentication
-PASSOU — Email retry requires authentication
-PASSOU — Server starts with no values and orders closed
-PASSOU — Password rotation invalidates old server session
-PASSOU — New server session accepted
-PASSOU — Existing demo menu and answers retained during update
+PASSOU — Daily lunch and dessert totals are independent
+PASSOU — Dessert-only orders are included
+PASSOU — Dessert types reconcile with the daily total
+PASSOU — Days without requests show two zeroes
+PASSOU — Each daily card has two equally styled numbers and labels
+PASSOU — Older weeks are excluded from current daily totals
+PASSOU — Order dashboard has no email controls or statuses
+PASSOU — Large totals use a compact number style
+PASSOU — Dessert names remain escaped
+PASSOU — Current record projection removes historical notification status
+PASSOU — Frontend has no email routes or controls
+PASSOU — Worker has no outbound mail function, provider or credentials
+PASSOU — Request is stored without any outbound action, even with old email settings
+PASSOU — Retrying the same request does not duplicate it
+PASSOU — Saved request is visible in the private dashboard
+PASSOU — Private orders require authentication
+PASSOU — Old email retry endpoint is unavailable
+PASSOU — Old page cannot submit using an outdated API contract
