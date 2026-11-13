@@ -1,113 +1,93 @@
 A MESA — ORGANIZADOR DE EMENTAS
-Versão 4 — 13 de novembro de 2026
+Versão 5 — 13 de novembro de 2026
 ================================
 
-PEDIDOS NA PRÓPRIA PÁGINA
-Os pedidos são consultados em A cozinha → Pedidos.
-Não existe envio de email, serviço de notificações, botão de reenvio ou
-configuração de destinatário nesta versão.
-O registo de um pedido só o guarda para consulta no painel da cozinha.
+VERSÃO SEM DEMONSTRAÇÃO
+Foram retirados o modo de teste, a ementa de exemplo e o acesso local à cozinha.
+Os pedidos só são confirmados depois da resposta do servidor.
+Não existe gravação de pedidos neste navegador nem recuperação de dados de teste.
+Uma falha de ligação mantém o pedido por confirmar; pode repetir o envio.
 
-Cada dia apresenta dois números grandes, lado a lado:
-- Almoços à esquerda, a verde.
-- Sobremesas à direita, a roxo.
+ESTADO DA ATIVAÇÃO
+Este pacote ainda tem API_URL vazio e os identificadores do servidor por preencher.
+Antes de substituir a página atual, conclua a ligação descrita abaixo.
+Sem essa ligação, a página mostra "A página está a ser preparada" e não aceita pedidos.
+Descarregar estes ficheiros não publica o site nem cria a base de dados.
 
-As contagens de sobremesas incluem os pedidos sem almoço.
-A secção "Sobremesas por preparar" continua a separar as doses por sobremesa.
-Use "Atualizar pedidos" para obter os pedidos mais recentes.
-
-MANTÉM-SE
-- Pedidos só de almoço, só de sobremesa ou de ambos.
-- Quantidades independentes, de 1 a 99 doses.
-- Duas opções de sobremesa por semana.
-- Alergénios por prato e sobremesa.
-- Nome e observações, sem contacto e sem valores monetários.
-- Código da cozinha definido na versão 3 e botão Mostrar/Ocultar.
-- Logótipo e fundo preparados para uma futura alteração.
-
-EXPERIMENTAR
-Abra index.html no navegador.
-A faixa "Demonstração" identifica o modo local. Os testes só ficam na sessão
-desse navegador; outras pessoas ou dispositivos não os veem.
-A prévia tenta recuperar a ementa e os pedidos das versões 2 e 3 que existam
-na mesma sessão e origem.
-Entre na cozinha e abra Pedidos para consultar os testes.
-
-PARA A EQUIPA USAR
-As pessoas usam a mesma página para escolher as refeições, e a cozinha
-consulta os pedidos no separador reservado.
-A ligação ao servidor guarda a ementa e os pedidos partilhados entre os
-dispositivos. Não exige email. Só o HTML no GitHub mantém o modo demonstração
-enquanto API_URL estiver vazio.
-
-ATUALIZAR UMA INSTALAÇÃO EXISTENTE
-1. Guarde uma cópia dos ficheiros anteriores.
-2. Conserve o seu endereço API_URL no novo index.html, caso já esteja definido.
-3. Atualize os dois ficheiros da pasta servidor:
-     worker.mjs
-     validation.mjs
-   Preserve o seu wrangler.toml com a base de dados e ALLOWED_ORIGIN atuais.
-4. Na pasta servidor, publique a nova API:
+JÁ TEM UM SERVIDOR ATIVO?
+1. Conserve o endereço API_URL da instalação atual no novo index.html.
+2. Se o servidor já usa os ficheiros da versão 4, não precisa de o alterar.
+   Se for anterior, publique worker.mjs e validation.mjs incluídos neste pacote,
+   mantendo o wrangler.toml da sua instalação:
      npx wrangler deploy
-5. Substitua o index.html no GitHub.
-6. Faça um pedido de teste e confirme que aparece em A cozinha → Pedidos.
+3. Substitua apenas o index.html no GitHub, depois de definir API_URL.
+4. Abra a página publicada e confirme um pedido em A cozinha → Pedidos.
 
-É necessário atualizar também o servidor para remover o envio da instalação
-publicada. A nova página recusa uma API anterior a esta versão, para impedir
-que use um servidor antigo ainda capaz de enviar notificações.
+Não recrie nem elimine uma base de dados existente. Os registos anteriores
+ficam no servidor; esta atualização não apaga pedidos nem ementas.
+O protocolo da API mantém schemaVersion 4 e continua a recusar servidores
+antigos que possam enviar emails.
 
-Não elimine nem recrie a base de dados. Os pedidos anteriores continuam
-disponíveis, sem estados ou opções de email.
-As antigas configurações de email, se existirem no servidor, são ignoradas
-pelo código da versão 4. Não são necessárias configurações novas.
+PRIMEIRA ATIVAÇÃO
+O GitHub Pages apresenta a página; o servidor incluído guarda a ementa e
+os pedidos num Cloudflare Worker com base D1.
+Precisa de uma conta Cloudflare e de Node.js com npm.
+Abra um terminal dentro da pasta servidor extraída do pacote.
 
-CONFIGURAR PELA PRIMEIRA VEZ
-O GitHub Pages apresenta a página. O servidor incluído corre num Cloudflare
-Worker e guarda a informação numa base D1.
-Este pacote não cria contas nem ativa os serviços automaticamente.
+1. Entre na sua conta e crie a base de dados:
+     npx wrangler login
+     npx wrangler d1 create a-mesa
 
-Requisitos: conta Cloudflare e Node.js com npm.
+2. No wrangler.toml, substitua COLOCAR-ID-DA-BASE-DE-DADOS pelo database_id
+   devolvido. Mantenha binding = "DB".
+   Em ALLOWED_ORIGIN coloque a origem do site, por exemplo:
+     https://seunome.github.io
+   Use o seu endereço real, sem o nome do repositório nem barra final.
 
-Na pasta servidor:
-  npx wrangler login
-  npx wrangler d1 create a-mesa
+3. Crie as tabelas e publique o servidor:
+     npx wrangler d1 execute a-mesa --remote --file=schema.sql
+     npx wrangler deploy
 
-Copie o database_id devolvido para wrangler.toml.
-Em ALLOWED_ORIGIN coloque só a origem do seu GitHub, por exemplo:
-  https://seunome.github.io
-Não inclua o nome do repositório nem uma barra final.
+4. Defina o código de acesso da cozinha:
+     npx wrangler secret put ADMIN_CODE
+   Introduza o último código combinado na conversa quando for pedido.
+   O código fica nas definições privadas do servidor. Não o coloque no HTML
+   nem em qualquer ficheiro do repositório público.
 
-Crie as tabelas:
-  npx wrangler d1 execute a-mesa --remote --file=schema.sql
+5. Copie o endereço HTTPS do Worker devolvido na publicação.
+   No index.html, substitua:
+     const API_URL = '';
+   por:
+     const API_URL = 'https://ENDERECO-REAL-DO-SEU-WORKER';
+   Use o endereço base, sem acrescentar /api/menu ou /api/orders.
+   O exemplo acima não é um endereço pronto a usar.
 
-Configure o código da cozinha:
-  npx wrangler secret put ADMIN_CODE
-Introduza o código escolhido na conversa quando lhe for pedido o valor.
-Não escreva o código no HTML, no wrangler.toml ou num repositório público.
+6. Carregue o index.html configurado no repositório do site.
+   Abra o endereço publicado no GitHub Pages, em vez do ficheiro no computador.
 
-Publique:
-  npx wrangler deploy
+7. Entre em A cozinha, preencha a semana, os pratos, as fotografias,
+   as duas sobremesas e os alergénios. Assinale Aceitar pedidos e publique.
+   Uma base nova começa sem pratos nem sobremesas e com os pedidos fechados.
 
-No index.html, altere:
-  const API_URL = '';
-para o endereço HTTPS do seu Worker:
-  const API_URL = 'https://o-seu-worker.workers.dev';
+8. Confirme a ligação com um pedido no telemóvel e consulte-o no painel
+   da cozinha no computador. Este é o ensaio final da instalação real.
 
-Carregue esse index.html no GitHub.
-Entre na cozinha, preencha os pratos, as fotografias, as sobremesas e os
-alergénios, assinale "Aceitar pedidos" e publique a ementa.
-A primeira instalação começa com os pedidos fechados e sem pratos publicados.
+O QUE SE MANTÉM
+- Todos os pedidos em A cozinha → Pedidos, sem envio de emails.
+- Almoços a verde e sobremesas a roxo, com números grandes por dia.
+- Pedidos só de sobremesa, só de almoço ou de ambos.
+- Doses independentes de 1 a 99 e duas sobremesas semanais.
+- Alergénios, nome e observações, sem contacto nem preços.
+- Botão Mostrar/Ocultar no código da cozinha.
+- Hora limite de pedidos aplicada à data e hora de Lisboa.
 
-ALERGÉNIOS
-Reveja as receitas, os ingredientes e os rótulos dos fornecedores.
-Marque as categorias aplicáveis, acrescente detalhes e confirme
-"Informação revista pela cozinha".
-Uma lista vazia não garante ausência de alergénios.
+A cozinha deve rever os ingredientes, rótulos e alergénios antes de publicar.
+Uma lista de alergénios vazia não garante ausência de alergénios.
 
 VERIFICAÇÃO
-Foram verificadas as contagens diárias e a gravação/consulta dos pedidos,
-incluindo repetição do mesmo envio e pedidos só de sobremesa.
-Os serviços externos foram simulados nos testes. Nenhuma ação externa de
-envio foi executada. Os detalhes estão em VERIFICACAO.txt.
-Não foi possível fazer o teste visual num navegador ou publicar a instalação
-nesta sessão.
+Consulte VERIFICACAO.txt. Os testes desta alteração usam respostas simuladas.
+A publicação e o ensaio entre dispositivos ainda precisam de ser concluídos.
+
+Documentação da instalação:
+https://developers.cloudflare.com/d1/get-started/
+https://developers.cloudflare.com/workers/configuration/secrets/

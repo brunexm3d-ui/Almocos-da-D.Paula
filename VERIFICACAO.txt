@@ -1,23 +1,25 @@
-VERIFICAÇÃO DA VERSÃO 4 — 13/11/2026
+VERIFICAÇÃO DA VERSÃO 5 — 13/11/2026
 
-18 verificações passaram. Testes em JavaScript e serviços simulados.
-Não houve teste visual num navegador nem publicação no servidor.
+12 verificações passaram em JavaScript.
+Respostas de rede, URLs e elementos da página simulados.
+Não houve publicação, ensaio numa base D1 real nem teste visual em navegador.
 
-PASSOU — Daily lunch and dessert totals are independent
-PASSOU — Dessert-only orders are included
-PASSOU — Dessert types reconcile with the daily total
-PASSOU — Days without requests show two zeroes
-PASSOU — Each daily card has two equally styled numbers and labels
-PASSOU — Older weeks are excluded from current daily totals
-PASSOU — Order dashboard has no email controls or statuses
-PASSOU — Large totals use a compact number style
-PASSOU — Dessert names remain escaped
-PASSOU — Current record projection removes historical notification status
-PASSOU — Frontend has no email routes or controls
-PASSOU — Worker has no outbound mail function, provider or credentials
-PASSOU — Request is stored without any outbound action, even with old email settings
-PASSOU — Retrying the same request does not duplicate it
-PASSOU — Saved request is visible in the private dashboard
-PASSOU — Private orders require authentication
-PASSOU — Old email retry endpoint is unavailable
-PASSOU — Old page cannot submit using an outdated API contract
+PASSOU — Sem configuração, não aceita pedidos nem autenticação local
+PASSOU — Sem configuração, mostra estado de preparação sem formulário de pedido
+PASSOU — Recusa ligação HTTP e URL com credenciais
+PASSOU — Pedidos usam POST para a API e só aceitam a referência confirmada
+PASSOU — Falha de rede não transforma o pedido num registo local
+PASSOU — Resposta ilegível, erro HTTP e referência errada não confirmam o pedido
+PASSOU — Entrada e consultas da cozinha exigem token válido do servidor
+PASSOU — Servidor anterior ao contrato sem emails continua recusado
+PASSOU — Limite de pedidos por data e hora é aplicado sem exceção de teste
+PASSOU — Sobremesa sem almoço conserva doses e contagem independente
+PASSOU — Primeira base de dados começa vazia e com pedidos fechados
+PASSOU — Não inclui dados de teste, armazenamento local, código local nem funções de email
+
+O servidor e a estrutura de dados da versão 4 foram preservados.
+O frontend continua a exigir schemaVersion 4.
+Os ficheiros do servidor não foram modificados nesta alteração.
+
+O pacote exige a configuração de API_URL, DB, ALLOWED_ORIGIN e ADMIN_CODE.
+Nenhum endereço, conta ou base de dados real foi ativado nesta sessão.

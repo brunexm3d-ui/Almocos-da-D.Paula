@@ -31,7 +31,7 @@ function validateMenu(input,allowDemoImages=false){
   if(!d||d.id!==['dessert-a','dessert-b'][i]||typeof d.available!=='boolean')throw Error('Sobremesa inválida.');
   return {id:d.id,title:cleanText(d.title||'',80,d.available),available:d.available,...validateAllergens(d)};
  });
- return {schemaVersion:3,version:input.version,weekStart:input.weekStart,title:cleanText(input.title,70,true),intro:cleanText(input.intro||'',240),notice:cleanText(input.notice||'',300),cutoffTime:input.cutoffTime,accepting:input.accepting,days,desserts};
+ return {schemaVersion:4,version:input.version,weekStart:input.weekStart,title:cleanText(input.title,70,true),intro:cleanText(input.intro||'',240),notice:cleanText(input.notice||'',300),cutoffTime:input.cutoffTime,accepting:input.accepting,days,desserts};
 }
 
 const MAX_QUANTITY=99;
@@ -40,7 +40,7 @@ function requestClosed(day,menu,now,allowPast=false){
 }
 function makeOrder(input,menu,now,allowPast=false){
  if(!input||input.website||input.consent!==true)throw Error('Confirme a utilização do nome para tratar do pedido.');
- if(input.schemaVersion!==3)throw Error('Atualize a página para usar a nova versão dos pedidos.');
+ if(input.schemaVersion!==4)throw Error('Atualize a página para usar a nova versão dos pedidos.');
  if(typeof input.id!=='string'||!/^[A-Za-z0-9-]{20,80}$/.test(input.id))throw Error('Referência inválida.');
  if(input.version!==menu.version)throw Error('A ementa mudou. Atualize a página antes de enviar.');
  if(!menu.accepting)throw Error('Os pedidos estão fechados.');
@@ -65,11 +65,11 @@ function makeOrder(input,menu,now,allowPast=false){
   }
   return {date:day.date,title:day.title,want:x.want,quantity:x.quantity,...validateAllergens(day),dessert};
  });
- return {schemaVersion:3,id:input.id,version:menu.version,weekStart:menu.weekStart,name,note,items};
+ return {schemaVersion:4,id:input.id,version:menu.version,weekStart:menu.weekStart,name,note,items};
 }
 function orderView(o){
  const info=d=>({allergens:Array.isArray(d.allergens)?d.allergens.slice():[],allergensReviewed:d.allergensReviewed===true,allergenNotes:d.allergenNotes||''});
- return {schemaVersion:3,id:o.id,version:o.version,weekStart:o.weekStart,name:o.name,note:o.note||'',createdAt:o.createdAt,emailStatus:o.emailStatus,
+ return {schemaVersion:4,id:o.id,version:o.version,weekStart:o.weekStart,name:o.name,note:o.note||'',createdAt:o.createdAt,
   items:(o.items||[]).map(x=>({date:x.date,title:x.title||'',want:x.want===true,quantity:x.want?x.quantity:0,...info(x),
    dessert:x.dessert?{id:x.dessert.id,title:x.dessert.title,quantity:x.dessert.quantity,...info(x.dessert)}:null}))};
 }

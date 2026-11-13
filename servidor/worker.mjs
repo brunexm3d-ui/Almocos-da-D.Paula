@@ -15,7 +15,7 @@ function localNow(date=new Date()){
 function initialMenu(){
  const date=new Date(localNow().date+'T12:00:00Z');date.setUTCDate(date.getUTCDate()-(date.getUTCDay()+6)%7);
  const start=date.toISOString().slice(0,10),blank={allergens:[],allergensReviewed:false,allergenNotes:''};
- return {schemaVersion:3,version:1,weekStart:start,title:'A ementa desta semana',intro:'Comida caseira, feita com carinho.',notice:'Consulte os ingredientes e alergénios com a cozinha.',cutoffTime:'10:00',accepting:false,
+ return {schemaVersion:4,version:1,weekStart:start,title:'A ementa desta semana',intro:'Comida caseira, feita com carinho.',notice:'Consulte os ingredientes e alergénios com a cozinha.',cutoffTime:'10:00',accepting:false,
  days:Array.from({length:5},(_,i)=>{const d=new Date(date);d.setUTCDate(d.getUTCDate()+i);return {date:d.toISOString().slice(0,10),title:'',description:'',image:'',available:false,...blank};}),
  desserts:['dessert-a','dessert-b'].map(id=>({id,title:'',available:false,...blank}))};
 }
@@ -49,31 +49,11 @@ async function requireAdmin(request,env){
  if(!row||row.expires<=Math.floor(Date.now()/1000))fail(401,'A sessão terminou. Entre novamente.');
  return tokenHash;
 }
-function emailConfigured(env){return !!(env.RESEND_API_KEY&&env.EMAIL_FROM&&env.ORDERS_EMAIL);}
-function emailText(order){
- const lines=['Pedido de ementa: '+order.name,'Referência: '+order.id,'Semana: '+order.weekStart,''];
- for(const item of order.items){
-  lines.push(item.date+': '+(item.want?item.quantity+' × '+item.title:'sem almoço'));
-  lines.push(item.dessert?'  Sobremesa: '+item.dessert.quantity+' × '+item.dessert.title:'  Sem sobremesa');
- }
- lines.push('','Observações: '+(order.note||'Sem observações.'));
- return lines.join('\n');
-}
-async function sendNotice(env,order){
- if(!emailConfigured(env))return 'disabled';
- try{
-  const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json','Idempotency-Key':'almoco-'+order.id},
-   body:JSON.stringify({from:env.EMAIL_FROM,to:[env.ORDERS_EMAIL],subject:'Pedido de ementa — '+order.id.slice(0,8).toUpperCase(),text:emailText(order)}),
-   signal:AbortSignal.timeout(8000)});
-  if(!response.ok)return 'pending';
-  return 'sent';
- }catch{return 'pending';}
-}
 async function existingOrder(env,id,digest){
- const row=await env.DB.prepare('SELECT fingerprint,email_status FROM orders WHERE id=?').bind(id).first();
+ const row=await env.DB.prepare('SELECT fingerprint FROM orders WHERE id=?').bind(id).first();
  if(!row)return null;
  if(row.fingerprint!==digest)fail(409,'Esta referência já foi usada. Atualize a página antes de enviar outro pedido.');
- return {id,emailStatus:row.email_status};
+ return {id};
 }
 async function route(request,env,ctx){
  const url=new URL(request.url),path=url.pathname,method=request.method;
@@ -94,8 +74,8 @@ async function route(request,env,ctx){
  }
  if(method==='GET'&&path==='/api/admin'){
   await requireAdmin(request,env);const menu=await getMenu(env);
-  const data=await env.DB.prepare('SELECT data,email_status FROM orders WHERE week_start=? ORDER BY created_at DESC').bind(menu.weekStart).all();
-  return json({menu,orders:data.results.map(row=>({...orderView(JSON.parse(row.data)),emailStatus:row.email_status}))});
+  const data=await env.DB.prepare('SELECT data FROM orders WHERE week_start=? ORDER BY created_at DESC').bind(menu.weekStart).all();
+  return json({menu,orders:data.results.map(row=>orderView(JSON.parse(row.data)))});
  }
  if(method==='PUT'&&path==='/api/menu'){
   await requireAdmin(request,env);
@@ -116,31 +96,14 @@ async function route(request,env,ctx){
   const previous=await existingOrder(env,input.id,digest);if(previous)return json(previous);
   const menu=await getMenu(env),order=validated(()=>makeOrder(relevant,menu,localNow()));
   const createdAt=new Date().toISOString();order.createdAt=createdAt;
-  const status=emailConfigured(env)?'pending':'disabled';
-  const result=await env.DB.prepare('INSERT OR IGNORE INTO orders (id,week_start,created_at,fingerprint,data,email_status) SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM menu WHERE id=1 AND version=?)')
-    .bind(order.id,order.weekStart,createdAt,digest,JSON.stringify(order),status,menu.version).run();
+  // A coluna legada recebe um valor fixo para manter compatibilidade com bases existentes.
+  const result=await env.DB.prepare("INSERT OR IGNORE INTO orders (id,week_start,created_at,fingerprint,data,email_status) SELECT ?,?,?,?,?,'disabled' WHERE EXISTS (SELECT 1 FROM menu WHERE id=1 AND version=?)")
+    .bind(order.id,order.weekStart,createdAt,digest,JSON.stringify(order),menu.version).run();
   if(result.meta.changes!==1){
    const duplicate=await existingOrder(env,input.id,digest);if(duplicate)return json(duplicate);
    fail(409,'A ementa mudou. Atualize a página antes de enviar.');
   }
-  // The order is already durable. A mail outage must never cause a duplicate order.
-  const emailStatus=await sendNotice(env,order);
-  try{await env.DB.prepare('UPDATE orders SET email_status=? WHERE id=?').bind(emailStatus,order.id).run();}catch{}
-  return json({id:order.id,emailStatus},201);
- }
- if(method==='POST'&&path==='/api/email/retry'){
-  await requireAdmin(request,env);
-  const input=await readBody(request,300);
-  if(typeof input?.id!=='string'||!/^[A-Za-z0-9-]{20,80}$/.test(input.id))fail(400,'Referência inválida.');
-  if(!emailConfigured(env))fail(503,'Configure primeiro os avisos por email.');
-  const row=await env.DB.prepare('SELECT data,email_status,created_at FROM orders WHERE id=?').bind(input.id).first();
-  if(!row)fail(404,'Pedido não encontrado.');
-  if(row.email_status==='sent')return json({emailStatus:'sent'});
-  // Provider idempotency covers retries for 24 hours; avoid duplicates beyond that window.
-  if(Date.now()-Date.parse(row.created_at)>23*3600*1000)fail(409,'Confirme este pedido diretamente no painel. O prazo para repetir o email terminou.');
-  const emailStatus=await sendNotice(env,JSON.parse(row.data));
-  await env.DB.prepare('UPDATE orders SET email_status=? WHERE id=?').bind(emailStatus,input.id).run();
-  return json({emailStatus});
+  return json({id:order.id},201);
  }
  fail(404,'Operação não encontrada.');
 }
